@@ -4,19 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "PickupActor.generated.h"
+#include "HealthPickup.generated.h"
 
 class USphereComponent;
 class UStaticMeshComponent;
 
 UCLASS()
-class UNREAL10TH_CPPSCRIPT_API APickupActor : public AActor
+class UNREAL10TH_CPPSCRIPT_API AHealthPickup : public AActor
 {
     GENERATED_BODY()
 
 public:
     // Sets default values for this actor's properties
-    APickupActor();
+    AHealthPickup();
 
 protected:
     // Called when the game starts or when spawned
@@ -35,6 +35,5 @@ protected:
     TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float Stamina = 30.0f;
-
+    float HealthAmount = 25.0f;
 };

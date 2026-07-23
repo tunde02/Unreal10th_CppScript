@@ -25,5 +25,5 @@ protected:
     float MoveSpeed = 0.0f;
 
 private:
-    TObjectPtr<UPawnMovementComponent> OwnerMovementComponent = nullptr;
+    TWeakObjectPtr<UPawnMovementComponent> OwnerMovementComponent = nullptr;
 };

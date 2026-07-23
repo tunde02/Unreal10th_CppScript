@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
-#include "../Interface/StaminaInterface.h"
+#include "../Interface/StatInterface.h"
 
 #include "ActionCharacter.generated.h"
 
@@ -14,11 +14,10 @@
 class UInputAction;
 class USpringArmComponent;
 class UCameraComponent;
-class UAnimInstance;
-class UAnimMontage;
+class UStatComponent;
 
 UCLASS()
-class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStaminaInterface
+class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface
 {
     GENERATED_BODY()
 
@@ -26,9 +25,7 @@ public:
     // Sets default values for this character's properties
     AActionCharacter();
 
-    virtual float GetCurrentStamina_Implementation() const override;
-    virtual bool ConsumeStamina_Implementation(float InAmount) override;
-    virtual void RecoveryStamina_Implementation(float InAmount) override;
+    virtual UStatComponent* GetStatComponent_Implementation() const override;
 
 protected:
     // Called when the game starts or when spawned
@@ -45,11 +42,11 @@ protected:
     void OnTestAction(const FInputActionValue& InValue);
     void OnMoveAction(const FInputActionValue& InValue);
     void OnRollAction(const FInputActionValue& InValue);
-    void OnStartDashAction(const FInputActionValue& InValue);
-    void OnEndDashAction(const FInputActionValue& InValue);
-
     void OnSprintStart();
     void OnSprintEnd();
+
+private:
+    void SpendSprintStamina(float DeltaTime);
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -59,34 +56,39 @@ protected:
     TObjectPtr<UInputAction> IA_Move = nullptr;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    TObjectPtr<UInputAction> IA_Dash = nullptr;
+    TObjectPtr<UInputAction> IA_Sprint = nullptr;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TObjectPtr<UInputAction> IA_Roll = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    TWeakObjectPtr<UAnimMontage> RollMontage = nullptr;
+    TObjectPtr<UAnimMontage> RollMontage = nullptr;
 
     UPROPERTY(EditAnyWhere, BlueprintReadWrite)
     float WalkSpeed = 0.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-    float MaxStamina = 100.0f;
+    // 구르기에 필요한 스태미나 코스트
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    float RollStaminaCost = 30.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-    float CurrentStamina = 100.0f;
+    // 달리기에 필요한 초당 스태미나 코스트
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    float SprintStaminaCostPerSecond = 5.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-    float StaminaRecoveryTime = 3.0f;
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    float StaminaAutoRecoveryCoolTime = 3.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-    float StaminaRecoveryAmount = 10.0f;
+    // DEPRECATED : 타이머로 변경하면서 더 이상 사용하지 않음
+    //UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    //float StaminaAutoRecoveryAmountPerSecond = 10.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-    float RollStamina = 30.0f;
+    // 스태미나 자동 회복 타이머 틱당 회복량
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    float StaminaAutoRecoveryAmountPerTick = 1.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
-    float DashStamina = 20.0f;
+    // 스태미나 자동 회복 타이머 인터벌
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    float StaminaAutoRecoveryInterval = 0.1f;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -95,10 +97,12 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<UCameraComponent> CameraComponent = nullptr;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    TObjectPtr<UStatComponent> StatComponent = nullptr;
+
 private:
     UPROPERTY()
     TObjectPtr<UAnimInstance> AnimInstance = nullptr;
 
-    bool bIsDashing = false;
-    float StaminaElapsedTime = 0.0f;
+    bool bSprintMode = false;
 };
