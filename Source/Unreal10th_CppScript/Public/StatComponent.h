@@ -8,6 +8,9 @@
 #include "../Interface/HealthInterface.h"
 #include "StatComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStatEmpty);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnStatChange, float, Current, float, Max);
+
 struct FAutoRecoveryData
 {
     float CoolTime = 3.0f;
@@ -35,12 +38,27 @@ public:
     void Initialize(FAutoRecoveryData& InData);
 
     virtual float GetCurrentStamina_Implementation() const override;
+    virtual float GetMaxStamina_Implementation() const override;
     virtual bool ConsumeStamina_Implementation(float InAmount) override;
     virtual void RecoveryStamina_Implementation(float InAmount) override;
 
     virtual float GetCurrentHealth_Implementation() const override;
-    virtual bool ReduceHealth_Implementation(float InAmount) override;
-    virtual void RecoveryHealth_Implementation(float InAmount) override;
+    virtual float GetMaxHealth_Implementation() const override;
+    virtual void DamageHealth_Implementation(float InAmount) override;
+    virtual void HealHealth_Implementation(float InAmount) override;
+
+public:
+    UPROPERTY(BlueprintAssignable, Category = "Stat|Stamina")
+    FOnStatEmpty OnStaminaEmpty;
+
+    UPROPERTY(BlueprintAssignable, Category = "Stat|Health")
+    FOnStatEmpty OnDie;
+
+    UPROPERTY(BlueprintAssignable, Category = "Stat|Stamina")
+    FOnStatChange OnStaminaChange;
+
+    UPROPERTY(BlueprintAssignable, Category = "Stat|Health")
+    FOnStatChange OnHealthChange;
 
 protected:
     // Called when the game starts
@@ -56,16 +74,16 @@ private:
     void StaminaAutoRecovery();
 
 protected:
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float MaxStamina = 100.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float CurrentStamina = 100.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Health")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Health")
     float MaxHealth = 100.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Health")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Health")
     float CurrentHealth = 100.0f;
 
 private:
@@ -73,4 +91,6 @@ private:
     FTimerHandle StaminaAutoRecoveryTimerHandle;
 
     FAutoRecoveryData AutoRecoveryData;
+
+    const float StaminaEmptyCheckLimit = 0.01f;
 };

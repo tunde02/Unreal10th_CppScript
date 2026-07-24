@@ -25,7 +25,8 @@ public:
     // Sets default values for this character's properties
     AActionCharacter();
 
-    virtual UStatComponent* GetStatComponent_Implementation() const override;
+    UFUNCTION(BlueprintCallable, Category="Stat")
+    virtual UStatComponent* GetStatComponent() const override;
 
 protected:
     // Called when the game starts or when spawned

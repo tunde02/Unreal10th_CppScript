@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "Animation/AnimMontage.h"
 #include "StatComponent.h"
+#include "../Interface/StaminaInterface.h"
 
 // Sets default values
 AActionCharacter::AActionCharacter()
@@ -28,7 +29,7 @@ AActionCharacter::AActionCharacter()
     GetCharacterMovement()->bOrientRotationToMovement = true; // 캐릭터 이동 방향으로 바라보게 만들기
 }
 
-UStatComponent* AActionCharacter::GetStatComponent_Implementation() const
+UStatComponent* AActionCharacter::GetStatComponent() const
 {
     return StatComponent;
 }

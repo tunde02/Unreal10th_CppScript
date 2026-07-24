@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "../Public/StatComponent.h"
+//#include "../Public/StatComponent.h"
 #include "StatInterface.generated.h"
+
+class UStatComponent;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -23,6 +25,5 @@ class UNREAL10TH_CPPSCRIPT_API IStatInterface
 
     // Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-    UStatComponent* GetStatComponent() const;
+    virtual UStatComponent* GetStatComponent() const = 0;
 };

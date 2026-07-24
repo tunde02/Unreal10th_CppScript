@@ -2,6 +2,7 @@
 
 
 #include "StaminaPickup.h"
+#include "StatComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "../Interface/StatInterface.h"
@@ -42,7 +43,7 @@ void AStaminaPickup::NotifyActorBeginOverlap(AActor* OtherActor)
         return;
     }
 
-    UStatComponent* StatComponent = IStatInterface::Execute_GetStatComponent(OtherActor);
+    UStatComponent* StatComponent = Cast<IStatInterface>(OtherActor)->GetStatComponent();
 
     if (!IsValid(StatComponent) || !StatComponent->Implements<UStaminaInterface>())
     {

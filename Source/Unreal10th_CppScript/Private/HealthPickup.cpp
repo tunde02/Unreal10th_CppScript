@@ -2,6 +2,7 @@
 
 
 #include "HealthPickup.h"
+#include "StatComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "../Interface/StatInterface.h"
@@ -42,7 +43,7 @@ void AHealthPickup::NotifyActorBeginOverlap(AActor* OtherActor)
         return;
     }
 
-    UStatComponent* StatComponent = IStatInterface::Execute_GetStatComponent(OtherActor);
+    UStatComponent* StatComponent = Cast<IStatInterface>(OtherActor)->GetStatComponent();
 
     if (!IsValid(StatComponent) || !StatComponent->Implements<UHealthInterface>())
     {
@@ -51,10 +52,10 @@ void AHealthPickup::NotifyActorBeginOverlap(AActor* OtherActor)
 
     if (HealthAmount > 0.0f)
     {
-        IHealthInterface::Execute_RecoveryHealth(StatComponent, HealthAmount);
+        IHealthInterface::Execute_HealHealth(StatComponent, HealthAmount);
     }
     else
     {
-        IHealthInterface::Execute_ReduceHealth(StatComponent, -HealthAmount);
+        IHealthInterface::Execute_DamageHealth(StatComponent, -HealthAmount);
     }
 }
