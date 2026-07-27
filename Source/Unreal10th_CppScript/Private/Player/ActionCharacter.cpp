@@ -1,14 +1,16 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "ActionCharacter.h"
+#include "Player/ActionCharacter.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
+
+#include "Component/StatComponent.h"
+#include "Interface/StaminaInterface.h"
 #include "Animation/AnimMontage.h"
-#include "StatComponent.h"
-#include "../Interface/StaminaInterface.h"
+#include "AnimNotify/AnimNotifyState_SectionJump.h"
 
 // Sets default values
 AActionCharacter::AActionCharacter()
@@ -25,13 +27,19 @@ AActionCharacter::AActionCharacter()
 
     StatComponent = CreateDefaultSubobject<UStatComponent>(TEXT("Stat"));
 
-    bUseControllerRotationYaw = false; // 컨트롤러를  v xcde43v움질일 때 폰이 같이 회전되는 것 방지
+    bUseControllerRotationYaw = false; // 컨트롤러를 움질일 때 폰이 같이 회전되는 것 방지
     GetCharacterMovement()->bOrientRotationToMovement = true; // 캐릭터 이동 방향으로 바라보게 만들기
 }
 
 UStatComponent* AActionCharacter::GetStatComponent() const
 {
     return StatComponent;
+}
+
+void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
+{
+    SectionJumpNotify = InSectionJumpNotify;
+    bComboReady = SectionJumpNotify.IsValid();
 }
 
 // Called when the game starts or when spawned
@@ -95,6 +103,22 @@ void AActionCharacter::SpendSprintStamina(float DeltaTime)
     }
 }
 
+void AActionCharacter::SectionJumpForCombo()
+{
+    if (SectionJumpNotify.IsValid() && bComboReady)
+    {
+        UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage();
+        AnimInstance->Montage_SetNextSection(
+            AnimInstance->Montage_GetCurrentSection(),
+            SectionJumpNotify->GetNextSectionName(),
+            Current
+        );
+
+        IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
+        bComboReady = false;
+    }
+}
+
 // Called to bind functionality to input
 void AActionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -104,6 +128,7 @@ void AActionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
     {
         EnhancedInputComponent->BindAction(IA_Test, ETriggerEvent::Started, this, &AActionCharacter::OnTestAction);
         EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AActionCharacter::OnMoveAction);
+        EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionCharacter::OnAttackAction);
         EnhancedInputComponent->BindAction(IA_Roll, ETriggerEvent::Started, this, &AActionCharacter::OnRollAction);
 
         EnhancedInputComponent->BindActionValueLambda(
@@ -138,6 +163,25 @@ void AActionCharacter::OnMoveAction(const FInputActionValue& InValue)
     Direction = ControlYawRotation.RotateVector(Direction);
 
     AddMovementInput(Direction);
+}
+
+void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
+{
+    if (AnimInstance && IStaminaInterface::Execute_GetCurrentStamina(GetStatComponent()) > AttackCost)
+    {
+        // 다른 몽타주가 재생중이지 않을 때만 공격
+        if (!AnimInstance->IsAnyMontagePlaying())
+        {
+            // 첫 번째 콤보 공격
+            PlayAnimMontage(AttackMontage);
+            IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
+        }
+        // 공격 중일 때 또 공격하면, 다음 콤보 재생
+        else if (AnimInstance->GetCurrentActiveMontage() == AttackMontage)
+        {
+            SectionJumpForCombo();
+        }
+    }
 }
 
 void AActionCharacter::OnRollAction(const FInputActionValue& InValue)

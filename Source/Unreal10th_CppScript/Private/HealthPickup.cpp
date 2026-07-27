@@ -2,11 +2,11 @@
 
 
 #include "HealthPickup.h"
-#include "StatComponent.h"
+#include "Component/StatComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "../Interface/StatInterface.h"
-#include "../Interface/HealthInterface.h"
+#include "Interface/StatInterface.h"
+#include "Interface/HealthInterface.h"
 
 // Sets default values
 AHealthPickup::AHealthPickup()

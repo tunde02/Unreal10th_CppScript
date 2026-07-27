@@ -5,8 +5,8 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
-#include "../Interface/StatInterface.h"
-#include "StatComponent.h"
+#include "Interface/StatInterface.h"
+#include "Component/StatComponent.h"
 
 //void UStatBarWidget::TestImageColorChange(FLinearColor InColor)
 //{

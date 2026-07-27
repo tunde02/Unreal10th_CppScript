@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "FloatingActorByCurve.h"
+#include "Test/FloatingActorByCurve.h"
 
 void AFloatingActorByCurve::FloatingByCurveFloat(float DeltaTime, bool bLoop)
 {

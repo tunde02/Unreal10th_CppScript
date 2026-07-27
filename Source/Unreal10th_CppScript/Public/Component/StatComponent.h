@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "../Interface/StaminaInterface.h"
-#include "../Interface/HealthInterface.h"
+#include "Interface/StaminaInterface.h"
+#include "Interface/HealthInterface.h"
 #include "StatComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnStatEmpty);

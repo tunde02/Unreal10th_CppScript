@@ -2,11 +2,11 @@
 
 
 #include "StaminaPickup.h"
-#include "StatComponent.h"
+#include "Component/StatComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "../Interface/StatInterface.h"
-#include "../Interface/StaminaInterface.h"
+#include "Interface/StatInterface.h"
+#include "Interface/StaminaInterface.h"
 
 // Sets default values
 AStaminaPickup::AStaminaPickup()

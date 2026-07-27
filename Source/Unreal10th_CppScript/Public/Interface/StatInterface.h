@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-//#include "../Public/StatComponent.h"
 #include "StatInterface.generated.h"
 
 class UStatComponent;

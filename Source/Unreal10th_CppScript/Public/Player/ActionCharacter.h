@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
-#include "../Interface/StatInterface.h"
+#include "Interface/StatInterface.h"
 
 #include "ActionCharacter.generated.h"
 
@@ -15,6 +15,7 @@ class UInputAction;
 class USpringArmComponent;
 class UCameraComponent;
 class UStatComponent;
+class UAnimNotifyState_SectionJump;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface
@@ -27,6 +28,8 @@ public:
 
     UFUNCTION(BlueprintCallable, Category="Stat")
     virtual UStatComponent* GetStatComponent() const override;
+
+    void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
 
 protected:
     // Called when the game starts or when spawned
@@ -42,12 +45,15 @@ protected:
     // IA_Test 키를 입력했을 때 호출할 함수. 반환 형식이랑 파라미터 형식 맞춰야됨
     void OnTestAction(const FInputActionValue& InValue);
     void OnMoveAction(const FInputActionValue& InValue);
+    void OnAttackAction(const FInputActionValue& InValue);
     void OnRollAction(const FInputActionValue& InValue);
     void OnSprintStart();
     void OnSprintEnd();
 
 private:
     void SpendSprintStamina(float DeltaTime);
+
+    void SectionJumpForCombo();
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -60,12 +66,18 @@ protected:
     TObjectPtr<UInputAction> IA_Sprint = nullptr;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    TObjectPtr<UInputAction> IA_Attack = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TObjectPtr<UInputAction> IA_Roll = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
     TObjectPtr<UAnimMontage> RollMontage = nullptr;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
+    TObjectPtr<UAnimMontage> AttackMontage = nullptr;
+
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
     float WalkSpeed = 0.0f;
 
     // 구르기에 필요한 스태미나 코스트
@@ -91,6 +103,9 @@ protected:
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
     float StaminaAutoRecoveryInterval = 0.1f;
 
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Attack")
+    float AttackCost = 5.0f;
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<USpringArmComponent> CameraSpringArmComponent = nullptr;
@@ -106,4 +121,8 @@ private:
     TObjectPtr<UAnimInstance> AnimInstance = nullptr;
 
     bool bSprintMode = false;
+
+    TWeakObjectPtr<UAnimNotifyState_SectionJump> SectionJumpNotify = nullptr; // 발생한 콤보 노티파이를 저장해 놓는 변수
+
+    bool bComboReady = false; // 현재 콤보가 가능한지 확인하는 함수
 };
