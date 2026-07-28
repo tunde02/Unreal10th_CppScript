@@ -36,6 +36,11 @@ UStatComponent* AActionCharacter::GetStatComponent() const
     return StatComponent;
 }
 
+void AActionCharacter::OnWeaponAttackState(bool bEnable)
+{
+    OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
+}
+
 void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
 {
     SectionJumpNotify = InSectionJumpNotify;
@@ -114,6 +119,7 @@ void AActionCharacter::SectionJumpForCombo()
             Current
         );
 
+        OnWeaponAttackState(false);
         IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
         bComboReady = false;
     }
@@ -174,6 +180,8 @@ void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
         {
             // 첫 번째 콤보 공격
             PlayAnimMontage(AttackMontage);
+
+            OnWeaponAttackState(false);
             IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
         }
         // 공격 중일 때 또 공격하면, 다음 콤보 재생

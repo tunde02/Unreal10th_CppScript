@@ -6,9 +6,9 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "Interface/StatInterface.h"
+#include "Interface/WeaponUserInterface.h"
 
 #include "ActionCharacter.generated.h"
-
 
 // 전방 선언 모음
 class UInputAction;
@@ -18,7 +18,7 @@ class UStatComponent;
 class UAnimNotifyState_SectionJump;
 
 UCLASS()
-class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface
+class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface, public IWeaponUserInterface
 {
     GENERATED_BODY()
 
@@ -30,6 +30,9 @@ public:
     virtual UStatComponent* GetStatComponent() const override;
 
     void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
+
+    virtual void OnWeaponAttackState(bool bEnable) override;
+    virtual inline FOnWeaponAttackStateChanged& GetWeaponAttackStateChangedDelegate() { return OnWeaponAttackStateChanged; }
 
 protected:
     // Called when the game starts or when spawned
@@ -54,6 +57,9 @@ private:
     void SpendSprintStamina(float DeltaTime);
 
     void SectionJumpForCombo();
+
+public:
+    FOnWeaponAttackStateChanged OnWeaponAttackStateChanged;
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
