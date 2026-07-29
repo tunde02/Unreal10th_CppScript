@@ -7,6 +7,7 @@
 #include "WeaponActor.generated.h"
 
 class UCapsuleComponent;
+class UWeaponDataAsset;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AWeaponActor : public AActor
@@ -18,7 +19,13 @@ public:
     AWeaponActor();
 
     UFUNCTION(BlueprintCallable)
-    void OnEquipped(AActor* InOwner);
+    void InitializeWeapon(UWeaponDataAsset* InData);
+
+    UFUNCTION(BlueprintCallable)
+    void EquipToTarget(AActor* InTarget);
+
+    UFUNCTION(BlueprintCallable)
+    void DropWeapon();
 
 protected:
     // Called when the game starts or when spawned
@@ -37,6 +44,9 @@ protected:
     UFUNCTION(BlueprintCallable)
     void AttackEnable(bool bEnable);
 
+    UFUNCTION(BlueprintCallable)
+    void OnEquipped(AActor* InOwner);
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadonly)
     TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
@@ -44,11 +54,8 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadonly)
     TObjectPtr<UCapsuleComponent> HitArea = nullptr;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    FName AttachSocketName = TEXT("hand_rSocket");
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float WeaponDamage = 20.0f;
+    TObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
 
 private:
     // 무기를 장비하고 있는 캐릭터

@@ -36,5 +36,5 @@ void AWeaponPickup::NotifyActorBeginOverlap(AActor* OtherActor)
 
     AWeaponActor* NewWeapon = GetWorld()->SpawnActor<AWeaponActor>(WeaponActorClass, SpawnParams);
 
-    NewWeapon->OnEquipped(OtherActor);
+    NewWeapon->EquipToTarget(OtherActor);
 }

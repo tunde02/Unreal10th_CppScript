@@ -11,6 +11,9 @@
 #include "Interface/StaminaInterface.h"
 #include "Animation/AnimMontage.h"
 #include "AnimNotify/AnimNotifyState_SectionJump.h"
+#include "Data/WeaponDataAsset.h"
+#include "Weapon/WeaponActor.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AActionCharacter::AActionCharacter()
@@ -39,6 +42,45 @@ UStatComponent* AActionCharacter::GetStatComponent() const
 void AActionCharacter::OnWeaponAttackState(bool bEnable)
 {
     OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
+}
+
+void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData)
+{
+    // 이전 무기 해제
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon.Get()->DropWeapon();
+        CurrentWeapon = nullptr;
+    }
+
+    // 새 무기 장비
+    CurrentWeaponData = InWeaponData;
+
+    if (!InWeaponData->IsLoaded())
+    {
+        // 현재 요청을 람다 함수에 캡처하기 위한 변수
+        UWeaponDataAsset* RequestedData = InWeaponData;
+
+        // 람다 함수는 로딩이 완료됐을 때 실행된다
+        // 만약 로딩 중에 다른 무기를 장착하는 요청이 들어올 경우
+        // 장착 요청한 무기와 람다 함수에서 스폰된 무기가 달라진다
+        // 따라서 현재 장착 요청한 무기와 캡처해서 넘겼던 무기 데이터가 같을 때만 스폰
+        InWeaponData->RequestDataLoad(
+            FStreamableDelegate::CreateWeakLambda(
+                this,
+                [this, RequestedData]() {
+                    if (CurrentWeaponData == RequestedData)
+                    {
+                        SpawnWeaponActor();
+                    }
+                }
+            )
+        );
+    }
+    else
+    {
+        SpawnWeaponActor();
+    }
 }
 
 void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
@@ -125,6 +167,24 @@ void AActionCharacter::SectionJumpForCombo()
     }
 }
 
+void AActionCharacter::SpawnWeaponActor()
+{
+    // 무기 로딩이 끝나기 전에 장착 해제했으면
+    // 무기를 스폰할 필요 없음
+    if (!CurrentWeaponData)
+    {
+        return;
+    }
+
+    CurrentWeapon = GetWorld()->SpawnActorDeferred<AWeaponActor>(AWeaponActor::StaticClass(), FTransform::Identity, this, this);
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon->InitializeWeapon(CurrentWeaponData);
+        UGameplayStatics::FinishSpawningActor(CurrentWeapon.Get(), FTransform::Identity);
+        CurrentWeapon->EquipToTarget(this);
+    }
+}
+
 // Called to bind functionality to input
 void AActionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -150,6 +210,20 @@ void AActionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
                 OnSprintEnd();
             });
     }
+}
+
+float AActionCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+    float Damage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+    if (UStatComponent* StatComp = GetStatComponent())
+    {
+        IHealthInterface::Execute_DamageHealth(StatComp, Damage);
+
+        UE_LOG(LogTemp, Log, TEXT("%.1f 데미지를 입었습니다. (공격자: %s)"), Damage, *EventInstigator->GetName());
+    }
+
+    return Damage;
 }
 
 void AActionCharacter::OnTestAction(const FInputActionValue& InValue)

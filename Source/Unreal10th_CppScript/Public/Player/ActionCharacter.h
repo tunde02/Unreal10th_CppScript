@@ -16,6 +16,8 @@ class USpringArmComponent;
 class UCameraComponent;
 class UStatComponent;
 class UAnimNotifyState_SectionJump;
+class AWeaponActor;
+class UWeaponDataAsset;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface, public IWeaponUserInterface
@@ -34,6 +36,9 @@ public:
     virtual void OnWeaponAttackState(bool bEnable) override;
     virtual inline FOnWeaponAttackStateChanged& GetWeaponAttackStateChangedDelegate() { return OnWeaponAttackStateChanged; }
 
+    virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
+    //void UnEquipWeapon();
+
 protected:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
@@ -43,6 +48,8 @@ protected:
 
     // Called to bind functionality to input
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
     // IA_Test 키를 입력했을 때 호출할 함수. 반환 형식이랑 파라미터 형식 맞춰야됨
@@ -57,6 +64,8 @@ private:
     void SpendSprintStamina(float DeltaTime);
 
     void SectionJumpForCombo();
+
+    void SpawnWeaponActor();
 
 public:
     FOnWeaponAttackStateChanged OnWeaponAttackStateChanged;
@@ -111,6 +120,12 @@ protected:
 
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Attack")
     float AttackCost = 5.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item")
+    TWeakObjectPtr<AWeaponActor> CurrentWeapon = nullptr;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item")
+    TObjectPtr<UWeaponDataAsset> CurrentWeaponData = nullptr;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
