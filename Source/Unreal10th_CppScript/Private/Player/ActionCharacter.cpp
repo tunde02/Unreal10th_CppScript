@@ -47,11 +47,7 @@ void AActionCharacter::OnWeaponAttackState(bool bEnable)
 void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData)
 {
     // 이전 무기 해제
-    if (CurrentWeapon.IsValid())
-    {
-        CurrentWeapon.Get()->DropWeapon();
-        CurrentWeapon = nullptr;
-    }
+    IWeaponUserInterface::Execute_UnEquipWeapon(this);
 
     // 새 무기 장비
     CurrentWeaponData = InWeaponData;
@@ -80,6 +76,28 @@ void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData
     else
     {
         SpawnWeaponActor();
+    }
+}
+
+void AActionCharacter::EquipBasicWeapon_Implementation()
+{
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon->DropWeapon();
+        CurrentWeapon = nullptr;
+    }
+
+    CurrentWeaponData = BasicWeaponData;
+
+    SpawnWeaponActor();
+}
+
+void AActionCharacter::UnEquipWeapon_Implementation()
+{
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon->DropWeapon();
+        CurrentWeapon = nullptr;
     }
 }
 
@@ -121,6 +139,8 @@ void AActionCharacter::BeginPlay()
             StaminaAutoRecoveryAmountPerTick);
         StatComponent->Initialize(Data);
     }
+
+    IWeaponUserInterface::Execute_EquipBasicWeapon(this);
 }
 
 // Called every frame

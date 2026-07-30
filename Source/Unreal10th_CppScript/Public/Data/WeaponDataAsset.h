@@ -8,11 +8,12 @@
 #include "WeaponDataAsset.generated.h"
 
 class UStaticMesh;
+class UNiagaraSystem;
 
 /**
  *
  */
-UCLASS()
+UCLASS(BlueprintType)
 class UNREAL10TH_CPPSCRIPT_API UWeaponDataAsset : public UPrimaryDataAsset
 {
     GENERATED_BODY()
@@ -45,5 +46,11 @@ public:
     // 무기 공격력
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
     float AttackPower = 20.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
+    int32 UseCount = 3;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
+    TSoftObjectPtr<UNiagaraSystem> WeaponHitVfx;
 
 };

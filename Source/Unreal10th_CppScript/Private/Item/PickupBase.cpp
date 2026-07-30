@@ -4,6 +4,7 @@
 #include "Item/PickupBase.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "NiagaraComponent.h"
 
 // Sets default values
 APickupBase::APickupBase()
@@ -16,7 +17,11 @@ APickupBase::APickupBase()
     SetRootComponent(SphereCollision);
 
     Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-    Mesh->SetupAttachment(RootComponent);
+    Mesh->SetupAttachment(SphereCollision);
+    Mesh->SetCollisionProfileName("NoCollision");
+
+    NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("VFX"));
+    NiagaraComponent->SetupAttachment(SphereCollision);
 }
 
 // Called when the game starts or when spawned
@@ -24,6 +29,7 @@ void APickupBase::BeginPlay()
 {
     Super::BeginPlay();
 
+    ElapsedTime = 0.0f;
 }
 
 // Called every frame
@@ -31,6 +37,10 @@ void APickupBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    if (bIdle)
+    {
+        OnUpdateUpDownSpin(DeltaTime);
+    }
 }
 
 void APickupBase::NotifyActorBeginOverlap(AActor* OtherActor)
@@ -42,5 +52,30 @@ void APickupBase::NotifyActorBeginOverlap(AActor* OtherActor)
 
 void APickupBase::OnPickup(AActor* InTarget)
 {
+    bIdle = false;
+}
+
+void APickupBase::OnUpdateUpDownSpin(float InDeltaTime)
+{
+    if (!IsCurveAssetReady())
+    {
+        return;
+    }
+
+    ElapsedTime += InDeltaTime;
+
+    float Progress = FMath::Fmod(ElapsedTime / UpDownDuration, 1.0f);
+    FVector NewMeshLocation = MeshBaseLocation;
+    NewMeshLocation.Z += UpDownCurve->GetFloatValue(Progress) * UpDownHeight;
+
+    Mesh->SetRelativeLocation(NewMeshLocation);
+
+    float NewAngle = SpinCurve->GetFloatValue(Progress) * 360.0f;
+    Mesh->SetRelativeRotation(FRotator(0.0f, NewAngle, 0.0f));
+}
+
+bool APickupBase::IsCurveAssetReady() const
+{
+    return UpDownCurve != nullptr && SpinCurve != nullptr;
 }
 

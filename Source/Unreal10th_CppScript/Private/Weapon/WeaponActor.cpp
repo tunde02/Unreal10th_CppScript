@@ -11,6 +11,8 @@
 #include "Interface/HealthInterface.h"
 #include "Component/StatComponent.h"
 #include "Data/WeaponDataAsset.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
 
 // Sets default values
 AWeaponActor::AWeaponActor()
@@ -38,11 +40,17 @@ AWeaponActor::AWeaponActor()
 
 void AWeaponActor::InitializeWeapon(UWeaponDataAsset* InData)
 {
+    if (!InData)
+    {
+        return;
+    }
+
     WeaponData = InData;
     Mesh->SetStaticMesh(WeaponData->Mesh.Get());
-    Mesh->SetRelativeLocation(WeaponData->LocationOffset);
     HitArea->SetCapsuleHalfHeight(WeaponData->HitAreaHalfHeight, false);
     HitArea->SetCapsuleRadius(WeaponData->HitAreaRadius, false);
+
+    CurrentUseCount = WeaponData->UseCount;
 }
 
 void AWeaponActor::EquipToTarget(AActor* InTarget)
@@ -58,13 +66,33 @@ void AWeaponActor::DropWeapon()
     Mesh->SetCollisionProfileName(TEXT("PhysicsActor"));
     Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
     Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
+    Mesh->SetCollisionResponseToChannel(ECC_Player, ECollisionResponse::ECR_Ignore);
     Mesh->SetSimulatePhysics(true);
     HitArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-    FVector RandomDirection = FMath::VRandCone(FVector::UpVector, FMath::DegreesToRadians(45.0f));
-    float RandomForce = FMath::FRandRange(700.0f, 1200.0f);
-    Mesh->AddImpulse(RandomDirection * RandomForce, NAME_None, true);
-    Mesh->AddAngularImpulseInDegrees(FVector(FMath::FRandRange(0.0f, 1.0f), FMath::FRandRange(0.0f, 1.0f), FMath::FRandRange(0.0f, 1.0f)) * 500.0f, NAME_None, true);
+    // 일정 시간 이후에 무기와 플레이어가 다시 충돌 가능하도록 설정
+    FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+    TimerManager.SetTimer(
+        PhysicsDelayTimerHandle,
+        FTimerDelegate::CreateLambda(
+            [this]() {
+                Mesh->SetCollisionResponseToChannel(ECC_Player, ECollisionResponse::ECR_Block);
+            }
+        ),
+        PhysicsDelay,
+        false
+    );
+
+    // 뒤로 던지기
+    FVector BackwardDirection = -OwnerCharacter->GetActorForwardVector();
+    FVector ThrowDirection = BackwardDirection * 500.0f + FVector::UpVector * 400.0f;
+    Mesh->AddImpulse(ThrowDirection, NAME_None, true);
+    FVector AngularImpulse = FVector(FMath::RandRange(-200.0f, 200.0f)) + GetActorForwardVector() * 1000.0f;
+    Mesh->AddAngularImpulseInDegrees(AngularImpulse, NAME_None, true);
+
+    SetLifeSpan(DropLiftSpan);
+
+    OwnerCharacter = nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -77,9 +105,14 @@ void AWeaponActor::BeginPlay()
 
 void AWeaponActor::OnEquipped(AActor* InOwner)
 {
+    if (!WeaponData)
+    {
+        return;
+    }
+
     SetOwner(InOwner);
     OwnerCharacter = Cast<ACharacter>(InOwner);
-    FAttachmentTransformRules AttachRule(
+    FAttachmentTransformRules AttachRules(
         EAttachmentRule::SnapToTarget,
         EAttachmentRule::SnapToTarget,
         EAttachmentRule::SnapToTarget,
@@ -88,7 +121,11 @@ void AWeaponActor::OnEquipped(AActor* InOwner)
 
     if (OwnerCharacter.IsValid())
     {
-        AttachToComponent(OwnerCharacter.Get()->GetMesh(), AttachRule, WeaponData->AttachSocketName);
+        AttachToComponent(OwnerCharacter.Get()->GetMesh(), AttachRules, WeaponData->AttachSocketName);
+
+        // Offset 적용
+        SetActorRelativeLocation(WeaponData->LocationOffset);
+
         HitArea->IgnoreActorWhenMoving(OwnerCharacter.Get(), true); // 자기 자신과 충돌하지 않도록 설정
 
         IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter);
@@ -101,36 +138,32 @@ void AWeaponActor::OnEquipped(AActor* InOwner)
 
 void AWeaponActor::OnHitAreaBeginOverlap(UPrimitiveComponent* InOverlappedComponent, AActor* InOtherActor, UPrimitiveComponent* InOtherComp, int32 InOtherBodyIndex, bool bFromSweep, const FHitResult& InSweepResult)
 {
+    float Damage = WeaponData ? WeaponData->AttackPower : 1.0f;
+
     UE_LOG(LogTemp, Log, TEXT("오버랩된 대상 : %s"), *InOtherActor->GetName());
 
-    /*
-    if (!InOtherActor->Implements<UStatInterface>())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("%s 이 StatInterface를 구현하고 있지 않습니다!!"), *InOtherActor->GetName());
-        return;
-    }
+    UGameplayStatics::ApplyDamage(InOtherActor, Damage, OwnerCharacter->GetController(), this, nullptr);
 
-    UStatComponent* StatComp = Cast<IStatInterface>(InOtherActor)->GetStatComponent();
-
-    if (!StatComp->Implements<UHealthInterface>())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("%s 의 StatComponent가 HealthInterface를 구현하고 있지 않습니다!!"), *InOtherActor->GetName());
-        return;
-    }
-
-    IHealthInterface::Execute_DamageHealth(StatComp, AttackPower);
-
-    UE_LOG(LogTemp, Log, TEXT("무기로 피해를 입혔습니다 : %f"), AttackPower);
-    */
-
-    UGameplayStatics::ApplyDamage(InOtherActor, WeaponData->AttackPower, OwnerCharacter->GetController(), this, nullptr);
+    UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+        GetWorld(),
+        WeaponData->WeaponHitVfx.Get(),
+        GetActorLocation()
+    );
 }
 
 void AWeaponActor::AttackEnable(bool bEnable)
 {
+    if (CurrentUseCount < 1)
+    {
+        IWeaponUserInterface::Execute_EquipBasicWeapon(OwnerCharacter.Get());
+        return;
+    }
+
     if (bEnable)
     {
         HitArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        CurrentUseCount--;
+        UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
     }
     else
     {

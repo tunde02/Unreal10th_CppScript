@@ -28,7 +28,7 @@ public:
     // Sets default values for this character's properties
     AActionCharacter();
 
-    UFUNCTION(BlueprintCallable, Category="Stat")
+    UFUNCTION(BlueprintCallable, Category = "Stat")
     virtual UStatComponent* GetStatComponent() const override;
 
     void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
@@ -37,7 +37,8 @@ public:
     virtual inline FOnWeaponAttackStateChanged& GetWeaponAttackStateChangedDelegate() { return OnWeaponAttackStateChanged; }
 
     virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
-    //void UnEquipWeapon();
+    virtual void EquipBasicWeapon_Implementation() override;
+    virtual void UnEquipWeapon_Implementation() override;
 
 protected:
     // Called when the game starts or when spawned
@@ -96,14 +97,14 @@ protected:
     float WalkSpeed = 0.0f;
 
     // 구르기에 필요한 스태미나 코스트
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float RollStaminaCost = 30.0f;
 
     // 달리기에 필요한 초당 스태미나 코스트
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float SprintStaminaCostPerSecond = 5.0f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float StaminaAutoRecoveryCoolTime = 3.0f;
 
     // DEPRECATED : 타이머로 변경하면서 더 이상 사용하지 않음
@@ -111,21 +112,27 @@ protected:
     //float StaminaAutoRecoveryAmountPerSecond = 10.0f;
 
     // 스태미나 자동 회복 타이머 틱당 회복량
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float StaminaAutoRecoveryAmountPerTick = 1.0f;
 
     // 스태미나 자동 회복 타이머 인터벌
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float StaminaAutoRecoveryInterval = 0.1f;
 
-    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Attack")
+    UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Attack")
     float AttackCost = 5.0f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
     TWeakObjectPtr<AWeaponActor> CurrentWeapon = nullptr;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Item")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
     TObjectPtr<UWeaponDataAsset> CurrentWeaponData = nullptr;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    TWeakObjectPtr<AWeaponActor> BasicWeapon = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+    TObjectPtr<UWeaponDataAsset> BasicWeaponData = nullptr;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

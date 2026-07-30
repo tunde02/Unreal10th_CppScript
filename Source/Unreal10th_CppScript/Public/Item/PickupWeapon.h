@@ -8,7 +8,6 @@
 
 class AWeaponActor;
 class UWeaponDataAsset;
-class UCurveFloat;
 class UNiagaraSystem;
 
 /**
@@ -23,23 +22,52 @@ protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void OnConstruction(const FTransform& Transform) override;
+
     virtual void OnPickup(AActor* InTarget) override;
+    virtual void OnUpdatePickupEffect();
+    virtual void OnFinishPickupEffect();
 
 private:
     void FloatingByCurve(float DeltaTime);
     void AbsorbToTarget();
+    bool IsPickupEffectAssetReady() const;
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Data")
     TObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TObjectPtr<UCurveFloat> CurveFloat = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    TObjectPtr<UCurveFloat> PickupAlpha;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    TObjectPtr<UCurveFloat> PickupHeight;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    TObjectPtr<UCurveFloat> PickupScale;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    float PickupEffectDuration = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    float PickupEffectHeight = 50.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TObjectPtr<UNiagaraSystem> AbsorbEffectSystem = nullptr;
 
+    // DEPRECATED
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TObjectPtr<UCurveFloat> CurveFloat = nullptr;
+
 private:
+    // 아이템을 줍는 연출용 타이머의 실행 간격
+    const float TimerInterval = 0.02f;
+
+    FTimerHandle PickupEffectTimerHandle;
+    TWeakObjectPtr<AActor> TargetActor = nullptr;
+    float PickupElapsedTime = 0.0f;
+    FVector PickupStartLocation;
+
+    // DEPRECATED
     bool bPickuped = false;
     AActor* Target = nullptr;
     float ElapsedTime = 0.0f;
