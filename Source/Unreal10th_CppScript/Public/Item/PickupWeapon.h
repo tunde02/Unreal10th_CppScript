@@ -10,9 +10,6 @@ class AWeaponActor;
 class UWeaponDataAsset;
 class UNiagaraSystem;
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API APickupWeapon : public APickupBase
 {
@@ -20,7 +17,6 @@ class UNREAL10TH_CPPSCRIPT_API APickupWeapon : public APickupBase
 
 protected:
     virtual void BeginPlay() override;
-    virtual void Tick(float DeltaTime) override;
     virtual void OnConstruction(const FTransform& Transform) override;
 
     virtual void OnPickup(AActor* InTarget) override;
@@ -28,8 +24,6 @@ protected:
     virtual void OnFinishPickupEffect();
 
 private:
-    void FloatingByCurve(float DeltaTime);
-    void AbsorbToTarget();
     bool IsPickupEffectAssetReady() const;
 
 protected:
@@ -51,12 +45,8 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
     float PickupEffectHeight = 50.0f;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TObjectPtr<UNiagaraSystem> AbsorbEffectSystem = nullptr;
-
-    // DEPRECATED
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TObjectPtr<UCurveFloat> CurveFloat = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect|Pickup")
+    TObjectPtr<UNiagaraSystem> PickupVfx = nullptr;
 
 private:
     // 아이템을 줍는 연출용 타이머의 실행 간격
@@ -67,9 +57,4 @@ private:
     float PickupElapsedTime = 0.0f;
     FVector PickupStartLocation;
 
-    // DEPRECATED
-    bool bPickuped = false;
-    AActor* Target = nullptr;
-    float ElapsedTime = 0.0f;
-    float AbsorbSpeed = 2.0f;
 };

@@ -10,9 +10,6 @@
 
 class USkeletalMesh;
 
-/**
- *
- */
 UCLASS(BlueprintType)
 class UNREAL10TH_CPPSCRIPT_API UWeaponDataAsset : public UPrimaryDataAsset
 {

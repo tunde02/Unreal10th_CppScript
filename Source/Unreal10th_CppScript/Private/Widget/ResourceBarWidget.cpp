@@ -29,7 +29,8 @@ void UResourceBarWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    FName TargetPropertyName = (PropertyChangedEvent.Property != nullptr)
+    FName TargetPropertyName =
+        (PropertyChangedEvent.Property != nullptr)
         ? PropertyChangedEvent.Property->GetFName()
         : NAME_None;
 

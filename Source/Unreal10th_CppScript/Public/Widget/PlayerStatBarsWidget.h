@@ -8,9 +8,6 @@
 
 class UResourceBarWidget;
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UPlayerStatBarsWidget : public UUserWidget
 {
@@ -28,4 +25,5 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadonly, meta = (BindWidget))
     TObjectPtr<UResourceBarWidget> StaminaBar;
+
 };

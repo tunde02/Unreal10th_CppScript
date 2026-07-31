@@ -8,8 +8,8 @@ TSharedPtr<FStreamableHandle> UWeaponDataAsset::RequestDataLoad(FStreamableDeleg
 {
     TArray<FSoftObjectPath> TargetsToLoad;
     TargetsToLoad.Add(Mesh.ToSoftObjectPath());
-    TargetsToLoad.Add(WeaponHitVfx.ToSoftObjectPath());
     TargetsToLoad.Add(TrailVfx.ToSoftObjectPath());
+    TargetsToLoad.Add(WeaponHitVfx.ToSoftObjectPath());
 
     FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
     return Streamable.RequestAsyncLoad(TargetsToLoad, MoveTemp(InDelegate));
@@ -17,5 +17,5 @@ TSharedPtr<FStreamableHandle> UWeaponDataAsset::RequestDataLoad(FStreamableDeleg
 
 bool UWeaponDataAsset::IsLoaded() const
 {
-    return Mesh.IsValid() && WeaponHitVfx.IsValid() && TrailVfx.IsValid();
+    return Mesh.IsValid() && TrailVfx.IsValid() && WeaponHitVfx.IsValid();
 }

@@ -6,15 +6,15 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+
 #include "Interface/WeaponUserInterface.h"
 #include "Interface/StatInterface.h"
 #include "Interface/HealthInterface.h"
 #include "Component/StatComponent.h"
 #include "Data/WeaponDataAsset.h"
-#include "NiagaraFunctionLibrary.h"
-#include "NiagaraComponent.h"
 
-// Sets default values
 AWeaponActor::AWeaponActor()
 {
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -102,7 +102,8 @@ void AWeaponActor::DropWeapon()
     );
 
     // 뒤로 던지기
-    FVector BackwardDirection = OwnerCharacter.IsValid()
+    FVector BackwardDirection =
+        OwnerCharacter.IsValid()
         ? -OwnerCharacter->GetActorForwardVector()
         : FVector::BackwardVector;
     FVector ThrowDirection = BackwardDirection * 500.0f + FVector::UpVector * 400.0f;
@@ -139,12 +140,46 @@ void AWeaponActor::ResetUseCount()
 
 }
 
-// Called when the game starts or when spawned
 void AWeaponActor::BeginPlay()
 {
     Super::BeginPlay();
 
     HitArea->OnComponentBeginOverlap.AddDynamic(this, &AWeaponActor::OnHitAreaBeginOverlap);
+}
+
+void AWeaponActor::OnHitAreaBeginOverlap(UPrimitiveComponent* InOverlappedComponent, AActor* InOtherActor, UPrimitiveComponent* InOtherComp, int32 InOtherBodyIndex, bool bFromSweep, const FHitResult& InSweepResult)
+{
+    if (!OwnerCharacter.IsValid() || !InOtherActor)
+    {
+        return;
+    }
+
+    float Damage = WeaponData ? WeaponData->AttackPower : 1.0f;
+
+    UE_LOG(LogTemp, Log, TEXT("오버랩된 대상 : %s"), *InOtherActor->GetName());
+
+    UGameplayStatics::ApplyDamage(InOtherActor, Damage, OwnerCharacter->GetController(), this, nullptr);
+
+    UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+        GetWorld(),
+        WeaponData->WeaponHitVfx.Get(),
+        GetActorLocation()
+    );
+}
+
+void AWeaponActor::AttackEnable(bool bEnable)
+{
+    if (bEnable)
+    {
+        HitArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        TrailVfx->SetActive(true);
+        UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
+    }
+    else
+    {
+        HitArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        TrailVfx->SetActive(false);
+    }
 }
 
 void AWeaponActor::OnEquipped(AActor* InOwner)
@@ -170,54 +205,13 @@ void AWeaponActor::OnEquipped(AActor* InOwner)
         // Offset 적용
         SetActorRelativeLocation(WeaponData->LocationOffset);
 
-        HitArea->IgnoreActorWhenMoving(OwnerCharacter.Get(), true); // 자기 자신과 충돌하지 않도록 설정
+        // 자기 자신과 충돌하지 않도록 설정
+        HitArea->IgnoreActorWhenMoving(OwnerCharacter.Get(), true);
 
         IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter);
         if (WeaponUser)
         {
             WeaponUser->GetWeaponAttackStateChangedDelegate().BindUFunction(this, FName("AttackEnable"));
         }
-    }
-}
-
-void AWeaponActor::OnHitAreaBeginOverlap(UPrimitiveComponent* InOverlappedComponent, AActor* InOtherActor, UPrimitiveComponent* InOtherComp, int32 InOtherBodyIndex, bool bFromSweep, const FHitResult& InSweepResult)
-{
-    if (!OwnerCharacter.IsValid() || !InOtherActor)
-    {
-        return;
-    }
-
-    float Damage = WeaponData ? WeaponData->AttackPower : 1.0f;
-
-    UE_LOG(LogTemp, Log, TEXT("오버랩된 대상 : %s"), *InOtherActor->GetName());
-
-    UGameplayStatics::ApplyDamage(InOtherActor, Damage, OwnerCharacter->GetController(), this, nullptr);
-
-    UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-        GetWorld(),
-        WeaponData->WeaponHitVfx.Get(),
-        GetActorLocation()
-    );
-}
-
-void AWeaponActor::AttackEnable(bool bEnable)
-{
-    //if (CurrentUseCount < 1)
-    //{
-    //    IWeaponUserInterface::Execute_EquipBasicWeapon(OwnerCharacter.Get());
-    //    return;
-    //}
-
-    if (bEnable)
-    {
-        HitArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-        TrailVfx->SetActive(true);
-        //CurrentUseCount--;
-        //UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
-    }
-    else
-    {
-        HitArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        TrailVfx->SetActive(false);
     }
 }

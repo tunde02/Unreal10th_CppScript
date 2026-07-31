@@ -16,20 +16,14 @@ class UNREAL10TH_CPPSCRIPT_API APickupBase : public AActor
     GENERATED_BODY()
 
 public:
-    // Sets default values for this actor's properties
     APickupBase();
 
 protected:
-    // Called when the game starts or when spawned
     virtual void BeginPlay() override;
-
-    // Called every frame
     virtual void Tick(float DeltaTime) override;
-
     virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 
     virtual void OnPickup(AActor* InTarget);
-
     virtual void OnUpdateUpDownSpin(float InDeltaTime);
 
 private:
@@ -67,7 +61,7 @@ protected:
     float UpDownHeight = 100.0f;
 
 private:
-    float ElapsedTime = 0.0f;
     bool bIdle = true;
+    float ElapsedTime = 0.0f;
 
 };

@@ -6,10 +6,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "NiagaraComponent.h"
 
-// Sets default values
 APickupBase::APickupBase()
 {
-    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
 
     SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("RootCollision"));
@@ -24,7 +22,6 @@ APickupBase::APickupBase()
     NiagaraComponent->SetupAttachment(SphereCollision);
 }
 
-// Called when the game starts or when spawned
 void APickupBase::BeginPlay()
 {
     Super::BeginPlay();
@@ -32,7 +29,6 @@ void APickupBase::BeginPlay()
     ElapsedTime = 0.0f;
 }
 
-// Called every frame
 void APickupBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -53,7 +49,8 @@ void APickupBase::NotifyActorBeginOverlap(AActor* OtherActor)
 void APickupBase::OnPickup(AActor* InTarget)
 {
     UE_LOG(LogTemp, Log, TEXT("%s(이)가 %s를 획득했습니다."),
-           InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"), *GetName());
+           InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"),
+           *GetName());
     bIdle = false;
 }
 
@@ -65,6 +62,7 @@ void APickupBase::OnUpdateUpDownSpin(float InDeltaTime)
     }
 
     ElapsedTime += InDeltaTime;
+
     float Duration = FMath::Max(UpDownDuration, 0.001f);
     float Progress = FMath::Fmod(ElapsedTime / Duration, 1.0f);
     FVector NewMeshLocation = MeshBaseLocation;
@@ -73,6 +71,7 @@ void APickupBase::OnUpdateUpDownSpin(float InDeltaTime)
     Mesh->SetRelativeLocation(NewMeshLocation);
 
     float NewAngle = SpinCurve->GetFloatValue(Progress) * 360.0f;
+
     Mesh->SetRelativeRotation(FRotator(0.0f, NewAngle, 0.0f));
 }
 

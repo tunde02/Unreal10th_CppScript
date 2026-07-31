@@ -6,9 +6,6 @@
 #include "Item/PickupBase.h"
 #include "PickupEffect.generated.h"
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API APickupEffect : public APickupBase
 {

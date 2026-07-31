@@ -8,9 +8,6 @@
 
 class UPawnMovementComponent;
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UActionAnimInstance : public UAnimInstance
 {
@@ -26,4 +23,5 @@ protected:
 
 private:
     TWeakObjectPtr<UPawnMovementComponent> OwnerMovementComponent = nullptr;
+
 };

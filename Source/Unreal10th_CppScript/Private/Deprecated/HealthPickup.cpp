@@ -1,15 +1,15 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "StaminaPickup.h"
+#include "Deprecated/HealthPickup.h"
 #include "Component/StatComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Interface/StatInterface.h"
-#include "Interface/StaminaInterface.h"
+#include "Interface/HealthInterface.h"
 
 // Sets default values
-AStaminaPickup::AStaminaPickup()
+AHealthPickup::AHealthPickup()
 {
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
@@ -23,20 +23,20 @@ AStaminaPickup::AStaminaPickup()
 }
 
 // Called when the game starts or when spawned
-void AStaminaPickup::BeginPlay()
+void AHealthPickup::BeginPlay()
 {
     Super::BeginPlay();
 
 }
 
 // Called every frame
-void AStaminaPickup::Tick(float DeltaTime)
+void AHealthPickup::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
 }
 
-void AStaminaPickup::NotifyActorBeginOverlap(AActor* OtherActor)
+void AHealthPickup::NotifyActorBeginOverlap(AActor* OtherActor)
 {
     if (!IsValid(OtherActor) || !OtherActor->Implements<UStatInterface>())
     {
@@ -45,17 +45,17 @@ void AStaminaPickup::NotifyActorBeginOverlap(AActor* OtherActor)
 
     UStatComponent* StatComponent = Cast<IStatInterface>(OtherActor)->GetStatComponent();
 
-    if (!IsValid(StatComponent) || !StatComponent->Implements<UStaminaInterface>())
+    if (!IsValid(StatComponent) || !StatComponent->Implements<UHealthInterface>())
     {
         return;
     }
 
-    if (Stamina > 0.0f)
+    if (HealthAmount > 0.0f)
     {
-        IStaminaInterface::Execute_RecoveryStamina(StatComponent, Stamina);
+        IHealthInterface::Execute_HealHealth(StatComponent, HealthAmount);
     }
     else
     {
-        IStaminaInterface::Execute_ConsumeStamina(StatComponent, -Stamina);
+        IHealthInterface::Execute_DamageHealth(StatComponent, -HealthAmount);
     }
 }

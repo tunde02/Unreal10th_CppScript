@@ -4,9 +4,9 @@
 #include "Widget/PlayerStatBarsWidget.h"
 #include "Widget/ResourceBarWidget.h"
 #include "Interface/StatInterface.h"
+#include "Component/StatComponent.h"
 #include "Interface/HealthInterface.h"
 #include "Interface/StaminaInterface.h"
-#include "Component/StatComponent.h"
 
 void UPlayerStatBarsWidget::NativeConstruct()
 {
@@ -19,18 +19,18 @@ void UPlayerStatBarsWidget::InitializePlayerStatBars()
 {
     if (IStatInterface* Player = Cast<IStatInterface>(GetOwningPlayerPawn()))
     {
-        if (UStatComponent* Stat = Player->GetStatComponent())
+        if (UStatComponent* StatComp = Player->GetStatComponent())
         {
-            Stat->OnHealthChange.AddDynamic(HealthBar, &UResourceBarWidget::UpdateRecourceBar);
-            Stat->OnStaminaChange.AddDynamic(StaminaBar, &UResourceBarWidget::UpdateRecourceBar);
+            StatComp->OnHealthChange.AddDynamic(HealthBar, &UResourceBarWidget::UpdateRecourceBar);
+            StatComp->OnStaminaChange.AddDynamic(StaminaBar, &UResourceBarWidget::UpdateRecourceBar);
 
             HealthBar->UpdateRecourceBar(
-                IHealthInterface::Execute_GetCurrentHealth(Stat),
-                IHealthInterface::Execute_GetMaxHealth(Stat)
+                IHealthInterface::Execute_GetCurrentHealth(StatComp),
+                IHealthInterface::Execute_GetMaxHealth(StatComp)
             );
             StaminaBar->UpdateRecourceBar(
-                IStaminaInterface::Execute_GetCurrentStamina(Stat),
-                IStaminaInterface::Execute_GetMaxStamina(Stat)
+                IStaminaInterface::Execute_GetCurrentStamina(StatComp),
+                IStaminaInterface::Execute_GetMaxStamina(StatComp)
             );
         }
     }

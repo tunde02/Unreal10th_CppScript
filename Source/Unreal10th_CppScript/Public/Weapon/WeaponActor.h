@@ -18,7 +18,6 @@ class UNREAL10TH_CPPSCRIPT_API AWeaponActor : public AActor
     GENERATED_BODY()
 
 public:
-    // Sets default values for this actor's properties
     AWeaponActor();
 
     UFUNCTION(BlueprintCallable)
@@ -40,7 +39,6 @@ public:
     void ResetUseCount();
 
 protected:
-    // Called when the game starts or when spawned
     virtual void BeginPlay() override;
 
     UFUNCTION()
@@ -86,7 +84,7 @@ protected:
     float PhysicsDelay = 2.0f;
 
 private:
-    // 무기를 장비하고 있는 캐릭터
-    TWeakObjectPtr<ACharacter> OwnerCharacter = nullptr;
+    TWeakObjectPtr<ACharacter> OwnerCharacter = nullptr; // 무기를 장비하고 있는 캐릭터
     FTimerHandle PhysicsDelayTimerHandle;
+
 };

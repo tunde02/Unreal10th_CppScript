@@ -121,36 +121,7 @@ void UStatComponent::HealHealth_Implementation(float InAmount)
     //UE_LOG(LogTemp, Log, TEXT("Health : %.1f / %.1f"), CurrentHealth, MaxHealth);
 }
 
-// Called when the game starts
-void UStatComponent::BeginPlay()
-{
-    Super::BeginPlay();
-
-}
-
-// Called every frame
-void UStatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-    // ...
-}
-
 void UStatComponent::StaminaAutoRecovery()
 {
     IStaminaInterface::Execute_RecoveryStamina(this, AutoRecoveryData.RecoveryPerTick);
 }
-
-// DEPRECATED: 타이머로 대체
-//void UStatComponent::StaminaAutoRecovery(float DeltaTime)
-//{
-//    if (StaminaAutoRecoverySeconds < 0.0f && CurrentStamina < MaxStamina)
-//    {
-//        IStaminaInterface::Execute_RecoveryStamina(this, StaminaAutoRecoveryAmountPerSecond * DeltaTime);
-//    }
-//    else
-//    {
-//        StaminaAutoRecoverySeconds -= DeltaTime;
-//    }
-//}
-

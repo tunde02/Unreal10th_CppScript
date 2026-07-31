@@ -60,16 +60,6 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Stat|Health")
     FOnStatChange OnHealthChange;
 
-protected:
-    // Called when the game starts
-    virtual void BeginPlay() override;
-
-    // Called every frame
-    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-    // DEPRECATED : 타이머로 변경하면서 더 이상 사용하지 않음
-    //void StaminaAutoRecovery(float DeltaTime);
-
 private:
     void StaminaAutoRecovery();
 
@@ -87,10 +77,8 @@ protected:
     float CurrentHealth = 100.0f;
 
 private:
-    //float StaminaAutoRecoverySeconds = 0.0f; // DEPRECATED : 타이머로 변경하면서 더 이상 사용하지 않음
-    FTimerHandle StaminaAutoRecoveryTimerHandle;
-
-    FAutoRecoveryData AutoRecoveryData;
-
     const float StaminaEmptyCheckLimit = 0.01f;
+
+    FTimerHandle StaminaAutoRecoveryTimerHandle;
+    FAutoRecoveryData AutoRecoveryData;
 };

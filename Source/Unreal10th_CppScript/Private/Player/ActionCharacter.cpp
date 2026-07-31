@@ -6,16 +6,15 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Animation/AnimMontage.h"
 
 #include "Component/StatComponent.h"
 #include "Interface/StaminaInterface.h"
-#include "Animation/AnimMontage.h"
 #include "AnimNotify/AnimNotifyState_SectionJump.h"
 #include "Data/WeaponDataAsset.h"
 #include "Weapon/WeaponActor.h"
-#include "Kismet/GameplayStatics.h"
 
-// Sets default values
 AActionCharacter::AActionCharacter()
 {
     // Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
@@ -34,24 +33,6 @@ AActionCharacter::AActionCharacter()
     GetCharacterMovement()->bOrientRotationToMovement = true; // 캐릭터 이동 방향으로 바라보게 만들기
 }
 
-UStatComponent* AActionCharacter::GetStatComponent() const
-{
-    return StatComponent;
-}
-
-void AActionCharacter::OnWeaponAttackState(bool bEnable)
-{
-    OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
-}
-
-void AActionCharacter::OnWeaponDrop(UWeaponDataAsset* InDropWeaponData)
-{
-    if (DefaultWeaponData && (DefaultWeaponData != InDropWeaponData))
-    {
-        IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
-    }
-}
-
 void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData)
 {
     // 같은 종류의 무기 장비
@@ -62,9 +43,12 @@ void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData
     // 다른 종류의 무기 장비
     else
     {
-
         // 이전 무기 해제
-        IWeaponUserInterface::Execute_UnEquipWeapon(this);
+        if (CurrentWeapon.IsValid())
+        {
+            CurrentWeapon->DropWeapon();
+            CurrentWeapon = nullptr;
+        }
 
         // 새 무기 장비
         CurrentWeaponData = InWeaponData;
@@ -102,29 +86,24 @@ void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData
             SpawnWeaponActorAndEquip();
         }
     }
-
 }
 
-void AActionCharacter::EquipBasicWeapon_Implementation()
+void AActionCharacter::OnWeaponDrop(UWeaponDataAsset* InDropWeaponData)
 {
-    if (CurrentWeapon.IsValid())
+    if (DefaultWeaponData && (DefaultWeaponData != InDropWeaponData))
     {
-        CurrentWeapon->DropWeapon();
-        CurrentWeapon = nullptr;
+        IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
     }
-
-    CurrentWeaponData = DefaultWeaponData;
-
-    SpawnWeaponActorAndEquip();
 }
 
-void AActionCharacter::UnEquipWeapon_Implementation()
+void AActionCharacter::OnWeaponAttackState(bool bEnable)
 {
-    if (CurrentWeapon.IsValid())
-    {
-        CurrentWeapon->DropWeapon();
-        CurrentWeapon = nullptr;
-    }
+    OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
+}
+
+UStatComponent* AActionCharacter::GetStatComponent() const
+{
+    return StatComponent;
 }
 
 void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
@@ -133,7 +112,6 @@ void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSect
     bComboReady = SectionJumpNotify.IsValid();
 }
 
-// Called when the game starts or when spawned
 void AActionCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -142,7 +120,7 @@ void AActionCharacter::BeginPlay()
     {
         if (WalkSpeed < 0.1f)
         {
-            // WalkSpeed를 설정 안했으면 블루프린트에 입력된 기본 걷기 속도
+            // WalkSpeed를 설정 안했으면 블루프린트에 입력된 기본 걷기 속도로 설정
             WalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
         }
         else
@@ -169,89 +147,16 @@ void AActionCharacter::BeginPlay()
     if (DefaultWeaponData)
     {
         IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
-        //IWeaponUserInterface::Execute_EquipBasicWeapon(this); // DEPRECATED
     }
 }
 
-// Called every frame
 void AActionCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
     SpendSprintStamina(DeltaTime);
-
-    // DEPRECATED: 타이머로 대체
-    //StaminaAutoRecovery(DeltaTime);
 }
 
-void AActionCharacter::SpendSprintStamina(float DeltaTime)
-{
-    // 달리기 모드
-    // 이동 하고 있고
-    // 몽타주 재생 중이 아니라면
-    if (bSprintMode && !GetVelocity().IsNearlyZero()
-        && (AnimInstance && !AnimInstance->IsAnyMontagePlaying()))
-    {
-        if (!IStaminaInterface::Execute_ConsumeStamina(StatComponent, SprintStaminaCostPerSecond * DeltaTime))
-        {
-            // 스태미나가 다 떨어지면 달리기 모드 정지
-            OnSprintEnd();
-        }
-    }
-}
-
-void AActionCharacter::SectionJumpForCombo()
-{
-    if (SectionJumpNotify.IsValid() && bComboReady)
-    {
-        // 콤보로 몽타주가 시작되었다 -> 이전 애니메이션이 끝났다 -> 횟수를 감소시킨다
-        OnAttackEnded(nullptr, true);
-
-        UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage();
-        AnimInstance->Montage_SetNextSection(
-            AnimInstance->Montage_GetCurrentSection(),
-            SectionJumpNotify->GetNextSectionName(),
-            Current
-        );
-
-        FOnMontageEnded AttackEndDelegate;
-        AttackEndDelegate.BindUObject(this, &AActionCharacter::OnAttackEnded);
-        AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
-
-        OnWeaponAttackState(false);
-        IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
-        bComboReady = false;
-    }
-}
-
-void AActionCharacter::SpawnWeaponActorAndEquip()
-{
-    // 무기 로딩이 끝나기 전에 장착 해제했으면
-    // 무기를 스폰할 필요 없음
-    if (!CurrentWeaponData)
-    {
-        return;
-    }
-
-    CurrentWeapon = GetWorld()->SpawnActorDeferred<AWeaponActor>(AWeaponActor::StaticClass(), FTransform::Identity, this, this);
-    if (CurrentWeapon.IsValid())
-    {
-        CurrentWeapon->InitializeWeapon(CurrentWeaponData);
-        CurrentWeapon->OnWeaponDrop.BindUObject(this, &AActionCharacter::OnWeaponDrop);
-        UGameplayStatics::FinishSpawningActor(CurrentWeapon.Get(), FTransform::Identity);
-        CurrentWeapon->EquipToTarget(this);
-    }
-}
-
-void AActionCharacter::OnAttackEnded(UAnimMontage* InMontage, bool bInterrupted)
-{
-    if (CurrentWeapon.IsValid())
-    {
-        CurrentWeapon->Use();
-    }
-}
-
-// Called to bind functionality to input
 void AActionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -286,7 +191,8 @@ float AActionCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
     {
         IHealthInterface::Execute_DamageHealth(StatComp, Damage);
 
-        UE_LOG(LogTemp, Log, TEXT("%.1f 데미지를 입었습니다. (공격자: %s)"), Damage,
+        UE_LOG(LogTemp, Log, TEXT("%.1f 데미지를 입었습니다. (공격자: %s)"),
+               Damage,
                EventInstigator ? *EventInstigator->GetName() : TEXT("알 수 없음"));
     }
 
@@ -381,4 +287,71 @@ void AActionCharacter::OnSprintEnd()
     bSprintMode = false;
 
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AActionCharacter::SpendSprintStamina(float DeltaTime)
+{
+    // 달리기 모드
+    // 이동 하고 있고
+    // 몽타주 재생 중이 아니라면
+    if (bSprintMode && !GetVelocity().IsNearlyZero()
+        && (AnimInstance && !AnimInstance->IsAnyMontagePlaying()))
+    {
+        if (!IStaminaInterface::Execute_ConsumeStamina(StatComponent, SprintStaminaCostPerSecond * DeltaTime))
+        {
+            // 스태미나가 다 떨어지면 달리기 모드 정지
+            OnSprintEnd();
+        }
+    }
+}
+
+void AActionCharacter::SectionJumpForCombo()
+{
+    if (SectionJumpNotify.IsValid() && bComboReady)
+    {
+        // 콤보로 몽타주가 시작되었다 -> 이전 애니메이션이 끝났다 -> 횟수를 감소시킨다
+        OnAttackEnded(nullptr, true);
+
+        UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage();
+        AnimInstance->Montage_SetNextSection(
+            AnimInstance->Montage_GetCurrentSection(),
+            SectionJumpNotify->GetNextSectionName(),
+            Current
+        );
+
+        FOnMontageEnded AttackEndDelegate;
+        AttackEndDelegate.BindUObject(this, &AActionCharacter::OnAttackEnded);
+        AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
+
+        OnWeaponAttackState(false);
+        IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
+        bComboReady = false;
+    }
+}
+
+void AActionCharacter::SpawnWeaponActorAndEquip()
+{
+    // 무기 로딩이 끝나기 전에 장착 해제했으면
+    // 무기를 스폰할 필요 없음
+    if (!CurrentWeaponData)
+    {
+        return;
+    }
+
+    CurrentWeapon = GetWorld()->SpawnActorDeferred<AWeaponActor>(AWeaponActor::StaticClass(), FTransform::Identity, this, this);
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon->InitializeWeapon(CurrentWeaponData);
+        CurrentWeapon->OnWeaponDrop.BindUObject(this, &AActionCharacter::OnWeaponDrop);
+        UGameplayStatics::FinishSpawningActor(CurrentWeapon.Get(), FTransform::Identity);
+        CurrentWeapon->EquipToTarget(this);
+    }
+}
+
+void AActionCharacter::OnAttackEnded(UAnimMontage* InMontage, bool bInterrupted)
+{
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon->Use();
+    }
 }

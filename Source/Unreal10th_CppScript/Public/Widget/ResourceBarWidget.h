@@ -9,9 +9,6 @@
 class UProgressBar;
 class UTextBlock;
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UResourceBarWidget : public UUserWidget
 {
@@ -43,4 +40,5 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FLinearColor BackgroundColor = FLinearColor(0.0f, 1.0f, 0.0f, 0.2f);
+
 };

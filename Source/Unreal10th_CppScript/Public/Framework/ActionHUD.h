@@ -6,9 +6,6 @@
 #include "GameFramework/HUD.h"
 #include "ActionHUD.generated.h"
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionHUD : public AHUD
 {

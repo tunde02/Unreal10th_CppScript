@@ -26,36 +26,33 @@ class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public ISta
     GENERATED_BODY()
 
 public:
-    // Sets default values for this character's properties
     AActionCharacter();
 
+    /* 무기 장비 관련 함수들 */
+    virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
+
+    // 무기가 드랍되었을 때 실행될 함수
+    void OnWeaponDrop(UWeaponDataAsset* InDropWeaponData);
+
+    /* 이벤트 함수 */
+    // 무기 공격 활성화/비활성화 때 실행될 함수
+    virtual void OnWeaponAttackState(bool bEnable) override;
+
+    /* Getter, Setter */
     UFUNCTION(BlueprintCallable, Category = "Stat")
     virtual UStatComponent* GetStatComponent() const override;
 
-    void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
-
-    virtual void OnWeaponAttackState(bool bEnable) override;
-    void OnWeaponDrop(UWeaponDataAsset* InDropWeaponData); // 무기가 드랍되었을 때 실행될 함수
     virtual inline FOnWeaponAttackStateChanged& GetWeaponAttackStateChangedDelegate() { return OnWeaponAttackStateChanged; }
 
-    virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
-    virtual void EquipBasicWeapon_Implementation() override;
-    virtual void UnEquipWeapon_Implementation() override;
+    void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
 
 protected:
-    // Called when the game starts or when spawned
     virtual void BeginPlay() override;
-
-    // Called every frame
     virtual void Tick(float DeltaTime) override;
-
-    // Called to bind functionality to input
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 protected:
-    // IA_Test 키를 입력했을 때 호출할 함수. 반환 형식이랑 파라미터 형식 맞춰야됨
     void OnTestAction(const FInputActionValue& InValue);
     void OnMoveAction(const FInputActionValue& InValue);
     void OnAttackAction(const FInputActionValue& InValue);
@@ -84,19 +81,19 @@ protected:
     TObjectPtr<UInputAction> IA_Move = nullptr;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    TObjectPtr<UInputAction> IA_Sprint = nullptr;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TObjectPtr<UInputAction> IA_Attack = nullptr;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TObjectPtr<UInputAction> IA_Roll = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
-    TObjectPtr<UAnimMontage> RollMontage = nullptr;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    TObjectPtr<UInputAction> IA_Sprint = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
     TObjectPtr<UAnimMontage> AttackMontage = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
+    TObjectPtr<UAnimMontage> RollMontage = nullptr;
 
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Move")
     float WalkSpeed = 0.0f;
@@ -112,10 +109,6 @@ protected:
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float StaminaAutoRecoveryCoolTime = 3.0f;
 
-    // DEPRECATED : 타이머로 변경하면서 더 이상 사용하지 않음
-    //UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category="Stat|Stamina")
-    //float StaminaAutoRecoveryAmountPerSecond = 10.0f;
-
     // 스태미나 자동 회복 타이머 틱당 회복량
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Stat|Stamina")
     float StaminaAutoRecoveryAmountPerTick = 1.0f;
@@ -127,15 +120,11 @@ protected:
     UPROPERTY(EditAnyWhere, BlueprintReadWrite, Category = "Attack")
     float AttackCost = 5.0f;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
     TWeakObjectPtr<AWeaponActor> CurrentWeapon = nullptr;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
-    TObjectPtr<UWeaponDataAsset> CurrentWeaponData = nullptr;
-
-    // DEPRECATED
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TWeakObjectPtr<AWeaponActor> DefaultWeapon = nullptr;
+    TObjectPtr<UWeaponDataAsset> CurrentWeaponData = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
     TObjectPtr<UWeaponDataAsset> DefaultWeaponData = nullptr;
@@ -159,4 +148,5 @@ private:
     TWeakObjectPtr<UAnimNotifyState_SectionJump> SectionJumpNotify = nullptr; // 발생한 콤보 노티파이를 저장해 놓는 변수
 
     bool bComboReady = false; // 현재 콤보가 가능한지 확인하는 함수
+
 };

@@ -15,9 +15,6 @@ class UWeaponUserInterface : public UInterface
     GENERATED_BODY()
 };
 
-/**
- *
- */
 class UNREAL10TH_CPPSCRIPT_API IWeaponUserInterface
 {
     GENERATED_BODY()
@@ -29,10 +26,4 @@ public:
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
     void EquipWeapon(UWeaponDataAsset* InWeaponData);
-
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-    void EquipBasicWeapon();
-
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-    void UnEquipWeapon();
 };
