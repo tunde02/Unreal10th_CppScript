@@ -204,6 +204,9 @@ void AActionCharacter::SectionJumpForCombo()
 {
     if (SectionJumpNotify.IsValid() && bComboReady)
     {
+        // 콤보로 몽타주가 시작되었다 -> 이전 애니메이션이 끝났다 -> 횟수를 감소시킨다
+        OnAttackEnded(nullptr, true);
+
         UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage();
         AnimInstance->Montage_SetNextSection(
             AnimInstance->Montage_GetCurrentSection(),
