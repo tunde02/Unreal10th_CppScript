@@ -8,6 +8,9 @@
 
 class UCapsuleComponent;
 class UWeaponDataAsset;
+class UNiagaraComponent;
+
+DECLARE_DELEGATE_OneParam(FOnWeaponDrop, UWeaponDataAsset*);
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AWeaponActor : public AActor
@@ -26,6 +29,15 @@ public:
 
     UFUNCTION(BlueprintCallable)
     void DropWeapon();
+
+    UFUNCTION(BlueprintCallable)
+    bool CanUse() const { return CurrentUseCount > 0; }
+
+    UFUNCTION(BlueprintCallable)
+    void Use();
+
+    UFUNCTION(BlueprintCallable)
+    void ResetUseCount();
 
 protected:
     // Called when the game starts or when spawned
@@ -47,15 +59,24 @@ protected:
     UFUNCTION(BlueprintCallable)
     void OnEquipped(AActor* InOwner);
 
+public:
+    FOnWeaponDrop OnWeaponDrop;
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadonly)
-    TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
+    TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadonly)
     TObjectPtr<UCapsuleComponent> HitArea = nullptr;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    TObjectPtr<UNiagaraComponent> TrailVfx = nullptr;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    int32 CurrentUseCount = 1;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float DropLiftSpan = 10.0f;
@@ -63,9 +84,6 @@ protected:
     // 드랍 직후 플레이어와의 물리 상호작용이 안되는 시간
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float PhysicsDelay = 2.0f;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    int32 CurrentUseCount = -1;
 
 private:
     // 무기를 장비하고 있는 캐릭터

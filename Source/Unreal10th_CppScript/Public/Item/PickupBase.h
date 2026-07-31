@@ -7,7 +7,7 @@
 #include "PickupBase.generated.h"
 
 class USphereComponent;
-class UStaticMeshComponent;
+class USkeletalMeshComponent;
 class UNiagaraComponent;
 
 UCLASS()
@@ -40,7 +40,7 @@ protected:
     TObjectPtr<USphereComponent> SphereCollision = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    TObjectPtr<UStaticMeshComponent> Mesh = nullptr;
+    TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<UNiagaraComponent> NiagaraComponent = nullptr;

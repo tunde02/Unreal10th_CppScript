@@ -18,6 +18,7 @@ class UStatComponent;
 class UAnimNotifyState_SectionJump;
 class AWeaponActor;
 class UWeaponDataAsset;
+class UAnimMontage;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface, public IWeaponUserInterface
@@ -34,6 +35,7 @@ public:
     void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
 
     virtual void OnWeaponAttackState(bool bEnable) override;
+    void OnWeaponDrop(UWeaponDataAsset* InDropWeaponData); // 무기가 드랍되었을 때 실행될 함수
     virtual inline FOnWeaponAttackStateChanged& GetWeaponAttackStateChangedDelegate() { return OnWeaponAttackStateChanged; }
 
     virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
@@ -66,7 +68,10 @@ private:
 
     void SectionJumpForCombo();
 
-    void SpawnWeaponActor();
+    void SpawnWeaponActorAndEquip();
+
+    // 공격 몽타주가 끝날 때 실행될 함수
+    void OnAttackEnded(UAnimMontage* InMontage, bool bInterrupted);
 
 public:
     FOnWeaponAttackStateChanged OnWeaponAttackStateChanged;
@@ -128,6 +133,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item")
     TObjectPtr<UWeaponDataAsset> CurrentWeaponData = nullptr;
 
+    // DEPRECATED
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
     TWeakObjectPtr<AWeaponActor> DefaultWeapon = nullptr;
 

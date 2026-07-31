@@ -20,7 +20,7 @@ AWeaponActor::AWeaponActor()
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = false;
 
-    Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootMesh"));
+    Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("RootMesh"));
     SetRootComponent(Mesh);
     Mesh->SetGenerateOverlapEvents(false);
     Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -36,6 +36,9 @@ AWeaponActor::AWeaponActor()
     HitArea->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
     HitArea->SetCollisionResponseToChannel(ECC_Enemy, ECollisionResponse::ECR_Overlap);
     HitArea->SetRelativeLocation(FVector(0.0f, 0.0f, 50.0f));
+
+    TrailVfx = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailVfx"));
+    TrailVfx->SetupAttachment(Mesh);
 }
 
 void AWeaponActor::InitializeWeapon(UWeaponDataAsset* InData)
@@ -50,7 +53,8 @@ void AWeaponActor::InitializeWeapon(UWeaponDataAsset* InData)
     // 로딩이 완료되었을 때만 처리
     if (WeaponData->IsLoaded())
     {
-        Mesh->SetStaticMesh(WeaponData->Mesh.Get());
+        Mesh->SetSkeletalMesh(WeaponData->Mesh.Get());
+        TrailVfx->SetAsset(WeaponData->TrailVfx.Get());
     }
 
     HitArea->SetCapsuleHalfHeight(WeaponData->HitAreaHalfHeight, false);
@@ -75,7 +79,7 @@ void AWeaponActor::DropWeapon()
     FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
     DetachFromActor(DetachRules);
 
-    Mesh->SetCollisionProfileName(TEXT("PhysicsActor"));
+    Mesh->SetCollisionProfileName(TEXT("Ragdoll"));
     Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
     Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
     Mesh->SetCollisionResponseToChannel(ECC_Player, ECollisionResponse::ECR_Ignore);
@@ -107,7 +111,31 @@ void AWeaponActor::DropWeapon()
 
     SetLifeSpan(DropLiftSpan);
 
+    //OnWeaponDrop.ExecuteIfBound(WeaponData);
+    OnWeaponDrop.Unbind();
     OwnerCharacter = nullptr;
+}
+
+void AWeaponActor::Use()
+{
+    if (WeaponData && !WeaponData->bInfinityUse)
+    {
+        CurrentUseCount--;
+        UE_LOG(LogTemp, Log, TEXT("%s의 남은 무기 사용 횟수 : %d"), *GetName(), CurrentUseCount);
+
+        if (CurrentUseCount <= 0)
+        {
+            //DropWeapon();
+            OnWeaponDrop.ExecuteIfBound(WeaponData);
+        }
+    }
+}
+
+void AWeaponActor::ResetUseCount()
+{
+    CurrentUseCount = WeaponData->UseCount;
+    UE_LOG(LogTemp, Log, TEXT("%s의 남은 무기 사용 횟수 : %d"), *GetName(), CurrentUseCount);
+
 }
 
 // Called when the game starts or when spawned
@@ -173,17 +201,17 @@ void AWeaponActor::OnHitAreaBeginOverlap(UPrimitiveComponent* InOverlappedCompon
 
 void AWeaponActor::AttackEnable(bool bEnable)
 {
-    if (CurrentUseCount < 1)
-    {
-        IWeaponUserInterface::Execute_EquipBasicWeapon(OwnerCharacter.Get());
-        return;
-    }
+    //if (CurrentUseCount < 1)
+    //{
+    //    IWeaponUserInterface::Execute_EquipBasicWeapon(OwnerCharacter.Get());
+    //    return;
+    //}
 
     if (bEnable)
     {
         HitArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-        CurrentUseCount--;
-        UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
+        //CurrentUseCount--;
+        //UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
     }
     else
     {

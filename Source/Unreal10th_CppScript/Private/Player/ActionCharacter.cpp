@@ -44,46 +44,65 @@ void AActionCharacter::OnWeaponAttackState(bool bEnable)
     OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
 }
 
+void AActionCharacter::OnWeaponDrop(UWeaponDataAsset* InDropWeaponData)
+{
+    if (DefaultWeaponData && (DefaultWeaponData != InDropWeaponData))
+    {
+        IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
+    }
+}
+
 void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData)
 {
-    // 이전 무기 해제
-    IWeaponUserInterface::Execute_UnEquipWeapon(this);
-
-    // 새 무기 장비
-    CurrentWeaponData = InWeaponData;
-
-    if (!CurrentWeaponData)
+    // 같은 종류의 무기 장비
+    if (InWeaponData == CurrentWeaponData)
     {
-        return;
+        CurrentWeapon->ResetUseCount();
     }
-
-    // 에셋이 로딩 안됐으면 로딩 요청
-    if (!CurrentWeaponData->IsLoaded())
-    {
-        // 현재 요청을 람다 함수에 캡처하기 위한 변수
-        UWeaponDataAsset* RequestedData = CurrentWeaponData;
-
-        // 람다 함수는 로딩이 완료됐을 때 실행된다
-        // 만약 로딩 중에 다른 무기를 장착하는 요청이 들어올 경우
-        // 장착 요청한 무기와 람다 함수에서 스폰된 무기가 달라진다
-        // 따라서 현재 장착 요청한 무기와 캡처해서 넘겼던 무기 데이터가 같을 때만 스폰
-        CurrentWeaponData->RequestDataLoad(
-            FStreamableDelegate::CreateWeakLambda(
-                this,
-                [this, RequestedData]() {
-                    if (CurrentWeaponData == RequestedData)
-                    {
-                        SpawnWeaponActor();
-                    }
-                }
-            )
-        );
-    }
-    // 에셋이 로딩 된 상태면 바로 무기 소환 및 장착
+    // 다른 종류의 무기 장비
     else
     {
-        SpawnWeaponActor();
+
+        // 이전 무기 해제
+        IWeaponUserInterface::Execute_UnEquipWeapon(this);
+
+        // 새 무기 장비
+        CurrentWeaponData = InWeaponData;
+
+        if (!CurrentWeaponData)
+        {
+            return;
+        }
+
+        // 에셋이 로딩 안됐으면 로딩 요청
+        if (!CurrentWeaponData->IsLoaded())
+        {
+            // 현재 요청을 람다 함수에 캡처하기 위한 변수
+            UWeaponDataAsset* RequestedData = CurrentWeaponData;
+
+            // 람다 함수는 로딩이 완료됐을 때 실행된다
+            // 만약 로딩 중에 다른 무기를 장착하는 요청이 들어올 경우
+            // 장착 요청한 무기와 람다 함수에서 스폰된 무기가 달라진다
+            // 따라서 현재 장착 요청한 무기와 캡처해서 넘겼던 무기 데이터가 같을 때만 스폰
+            CurrentWeaponData->RequestDataLoad(
+                FStreamableDelegate::CreateWeakLambda(
+                    this,
+                    [this, RequestedData]() {
+                        if (CurrentWeaponData == RequestedData)
+                        {
+                            SpawnWeaponActorAndEquip();
+                        }
+                    }
+                )
+            );
+        }
+        // 에셋이 로딩 된 상태면 바로 무기 소환 및 장착
+        else
+        {
+            SpawnWeaponActorAndEquip();
+        }
     }
+
 }
 
 void AActionCharacter::EquipBasicWeapon_Implementation()
@@ -96,7 +115,7 @@ void AActionCharacter::EquipBasicWeapon_Implementation()
 
     CurrentWeaponData = DefaultWeaponData;
 
-    SpawnWeaponActor();
+    SpawnWeaponActorAndEquip();
 }
 
 void AActionCharacter::UnEquipWeapon_Implementation()
@@ -192,13 +211,17 @@ void AActionCharacter::SectionJumpForCombo()
             Current
         );
 
+        FOnMontageEnded AttackEndDelegate;
+        AttackEndDelegate.BindUObject(this, &AActionCharacter::OnAttackEnded);
+        AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
+
         OnWeaponAttackState(false);
         IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
         bComboReady = false;
     }
 }
 
-void AActionCharacter::SpawnWeaponActor()
+void AActionCharacter::SpawnWeaponActorAndEquip()
 {
     // 무기 로딩이 끝나기 전에 장착 해제했으면
     // 무기를 스폰할 필요 없음
@@ -211,8 +234,17 @@ void AActionCharacter::SpawnWeaponActor()
     if (CurrentWeapon.IsValid())
     {
         CurrentWeapon->InitializeWeapon(CurrentWeaponData);
+        CurrentWeapon->OnWeaponDrop.BindUObject(this, &AActionCharacter::OnWeaponDrop);
         UGameplayStatics::FinishSpawningActor(CurrentWeapon.Get(), FTransform::Identity);
         CurrentWeapon->EquipToTarget(this);
+    }
+}
+
+void AActionCharacter::OnAttackEnded(UAnimMontage* InMontage, bool bInterrupted)
+{
+    if (CurrentWeapon.IsValid())
+    {
+        CurrentWeapon->Use();
     }
 }
 
@@ -279,13 +311,20 @@ void AActionCharacter::OnMoveAction(const FInputActionValue& InValue)
 
 void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
 {
-    if (AnimInstance && IStaminaInterface::Execute_GetCurrentStamina(GetStatComponent()) > AttackCost)
+    if (AnimInstance
+        && IStaminaInterface::Execute_GetCurrentStamina(GetStatComponent()) > AttackCost
+        && CurrentWeapon.IsValid()
+        && CurrentWeapon.Get()->CanUse())
     {
         // 다른 몽타주가 재생중이지 않을 때만 공격
         if (!AnimInstance->IsAnyMontagePlaying())
         {
             // 첫 번째 콤보 공격
             PlayAnimMontage(AttackMontage);
+
+            FOnMontageEnded AttackEndDelegate;
+            AttackEndDelegate.BindUObject(this, &AActionCharacter::OnAttackEnded);
+            AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
 
             OnWeaponAttackState(false);
             IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
