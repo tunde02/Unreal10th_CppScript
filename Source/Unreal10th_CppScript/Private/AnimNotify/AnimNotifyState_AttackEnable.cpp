@@ -8,19 +8,19 @@ void UAnimNotifyState_AttackEnable::NotifyBegin(USkeletalMeshComponent* MeshComp
 {
     Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
-    OwnerCharacter = Cast<IWeaponUserInterface>(MeshComp->GetOwner());
-    if (OwnerCharacter)
+    IWeaponUserInterface* WeaponOwner = Cast<IWeaponUserInterface>(MeshComp->GetOwner());
+    if (WeaponOwner)
     {
-        OwnerCharacter->OnWeaponAttackState(true);
+        WeaponOwner->OnWeaponAttackState(true);
     }
 }
 
 void UAnimNotifyState_AttackEnable::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
-    if (OwnerCharacter)
+    IWeaponUserInterface* WeaponOwner = Cast<IWeaponUserInterface>(MeshComp->GetOwner());
+    if (WeaponOwner)
     {
-        OwnerCharacter->OnWeaponAttackState(false);
-        OwnerCharacter = nullptr;
+        WeaponOwner->OnWeaponAttackState(false);
     }
 
     Super::NotifyEnd(MeshComp, Animation, EventReference);

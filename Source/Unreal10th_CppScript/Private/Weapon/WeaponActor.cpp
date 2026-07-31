@@ -46,7 +46,13 @@ void AWeaponActor::InitializeWeapon(UWeaponDataAsset* InData)
     }
 
     WeaponData = InData;
-    Mesh->SetStaticMesh(WeaponData->Mesh.Get());
+
+    // 로딩이 완료되었을 때만 처리
+    if (WeaponData->IsLoaded())
+    {
+        Mesh->SetStaticMesh(WeaponData->Mesh.Get());
+    }
+
     HitArea->SetCapsuleHalfHeight(WeaponData->HitAreaHalfHeight, false);
     HitArea->SetCapsuleRadius(WeaponData->HitAreaRadius, false);
 
@@ -60,6 +66,12 @@ void AWeaponActor::EquipToTarget(AActor* InTarget)
 
 void AWeaponActor::DropWeapon()
 {
+    IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter);
+    if (WeaponUser)
+    {
+        WeaponUser->GetWeaponAttackStateChangedDelegate().Clear();
+    }
+
     FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
     DetachFromActor(DetachRules);
 
@@ -74,7 +86,8 @@ void AWeaponActor::DropWeapon()
     FTimerManager& TimerManager = GetWorld()->GetTimerManager();
     TimerManager.SetTimer(
         PhysicsDelayTimerHandle,
-        FTimerDelegate::CreateLambda(
+        FTimerDelegate::CreateWeakLambda(
+            this,
             [this]() {
                 Mesh->SetCollisionResponseToChannel(ECC_Player, ECollisionResponse::ECR_Block);
             }
@@ -84,7 +97,9 @@ void AWeaponActor::DropWeapon()
     );
 
     // 뒤로 던지기
-    FVector BackwardDirection = -OwnerCharacter->GetActorForwardVector();
+    FVector BackwardDirection = OwnerCharacter.IsValid()
+        ? -OwnerCharacter->GetActorForwardVector()
+        : FVector::BackwardVector;
     FVector ThrowDirection = BackwardDirection * 500.0f + FVector::UpVector * 400.0f;
     Mesh->AddImpulse(ThrowDirection, NAME_None, true);
     FVector AngularImpulse = FVector(FMath::RandRange(-200.0f, 200.0f)) + GetActorForwardVector() * 1000.0f;
@@ -138,6 +153,11 @@ void AWeaponActor::OnEquipped(AActor* InOwner)
 
 void AWeaponActor::OnHitAreaBeginOverlap(UPrimitiveComponent* InOverlappedComponent, AActor* InOtherActor, UPrimitiveComponent* InOtherComp, int32 InOtherBodyIndex, bool bFromSweep, const FHitResult& InSweepResult)
 {
+    if (!OwnerCharacter.IsValid() || !InOtherActor)
+    {
+        return;
+    }
+
     float Damage = WeaponData ? WeaponData->AttackPower : 1.0f;
 
     UE_LOG(LogTemp, Log, TEXT("오버랩된 대상 : %s"), *InOtherActor->GetName());

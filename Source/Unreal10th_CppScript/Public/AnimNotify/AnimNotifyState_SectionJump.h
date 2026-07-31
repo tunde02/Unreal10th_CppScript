@@ -37,8 +37,4 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     FName NextSectionName;
 
-private:
-    TWeakObjectPtr<AActionCharacter> OwnerCharacter = nullptr;
-
-    // 오너 캐릭터한테, 지금 너가 가져야 할 애니메이션은 나야
 };

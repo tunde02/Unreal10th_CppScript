@@ -11,24 +11,25 @@ void APickupEffect::OnPickup(AActor* InTarget)
 {
     if (IStatInterface* Stat = Cast<IStatInterface>(InTarget))
     {
-        UStatComponent* StatComponent = Stat->GetStatComponent();
+        if (UStatComponent* StatComponent = Stat->GetStatComponent())
+        {
+            if (Stamina > 0.0f)
+            {
+                IStaminaInterface::Execute_RecoveryStamina(StatComponent, Stamina);
+            }
+            else if (Stamina < 0.0f)
+            {
+                IStaminaInterface::Execute_ConsumeStamina(StatComponent, -Stamina);
+            }
 
-        if (Stamina > 0.0f)
-        {
-            IStaminaInterface::Execute_RecoveryStamina(StatComponent, Stamina);
-        }
-        else if (Stamina < 0.0f)
-        {
-            IStaminaInterface::Execute_ConsumeStamina(StatComponent, -Stamina);
-        }
-
-        if (Health > 0.0f)
-        {
-            IHealthInterface::Execute_HealHealth(StatComponent, Health);
-        }
-        else if (Health < 0.0f)
-        {
-            IHealthInterface::Execute_DamageHealth(StatComponent, -Health);
+            if (Health > 0.0f)
+            {
+                IHealthInterface::Execute_HealHealth(StatComponent, Health);
+            }
+            else if (Health < 0.0f)
+            {
+                IHealthInterface::Execute_DamageHealth(StatComponent, -Health);
+            }
         }
     }
 }

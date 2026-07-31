@@ -7,7 +7,8 @@
 
 void UResourceBarWidget::UpdateRecourceBar(float InCurrent, float InMax)
 {
-    Bar->SetPercent(InCurrent / InMax);
+    float Max = FMath::Max(InMax, 0.001f);
+    Bar->SetPercent(InCurrent / Max);
     CurrentText->SetText(FText::AsNumber(FMath::FloorToInt(InCurrent)));
     MaxText->SetText(FText::AsNumber(FMath::FloorToInt(InMax)));
 }
@@ -28,8 +29,7 @@ void UResourceBarWidget::PostEditChangeProperty(FPropertyChangedEvent& PropertyC
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    FName TargetPropertyName =
-        (PropertyChangedEvent.Property != nullptr)
+    FName TargetPropertyName = (PropertyChangedEvent.Property != nullptr)
         ? PropertyChangedEvent.Property->GetFName()
         : NAME_None;
 

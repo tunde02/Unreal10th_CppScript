@@ -24,14 +24,16 @@ void APickupWeapon::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    //if (bPickuped)
-    //{
-    //    AbsorbToTarget();
-    //}
-    //else
-    //{
-    //    FloatingByCurve(DeltaTime);
-    //}
+    /* DEPRECATED
+    if (bPickuped)
+    {
+        AbsorbToTarget();
+    }
+    else
+    {
+        FloatingByCurve(DeltaTime);
+    }
+    */
 }
 
 void APickupWeapon::OnConstruction(const FTransform& Transform)
@@ -90,7 +92,8 @@ void APickupWeapon::OnUpdatePickupEffect()
     }
 
     PickupElapsedTime += TimerInterval;
-    float Progress = PickupElapsedTime / PickupEffectDuration;
+    float Duration = FMath::Max(PickupEffectDuration, 0.001f);
+    float Progress = PickupElapsedTime / Duration;
 
     float DistanceAlpha = PickupAlpha->GetFloatValue(Progress);
     FVector Goal = TargetActor.Get()->GetActorLocation();

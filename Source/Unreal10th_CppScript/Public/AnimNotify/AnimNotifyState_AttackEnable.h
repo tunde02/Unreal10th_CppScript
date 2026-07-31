@@ -30,7 +30,4 @@ protected:
         const FAnimNotifyEventReference& EventReference
     ) override;
 
-private:
-    //TWeakObjectPtr<AActionCharacter> OwnerCharacter = nullptr;
-    IWeaponUserInterface* OwnerCharacter = nullptr;
 };

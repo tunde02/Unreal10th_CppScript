@@ -36,20 +36,24 @@ float UStatComponent::GetMaxStamina_Implementation() const
 bool UStatComponent::ConsumeStamina_Implementation(float InAmount)
 {
     bool bResult = false;
+    InAmount = FMath::Max(InAmount, 0.0f);
 
     if (CurrentStamina >= InAmount)
     {
         CurrentStamina -= InAmount;
 
-        FTimerManager& TimerManager = GetWorld()->GetTimerManager();
-        TimerManager.SetTimer(
-            StaminaAutoRecoveryTimerHandle,
-            this,
-            &UStatComponent::StaminaAutoRecovery,
-            AutoRecoveryData.TickInterval,
-            true,
-            AutoRecoveryData.CoolTime
-        );
+        if (GetWorld())
+        {
+            FTimerManager& TimerManager = GetWorld()->GetTimerManager();
+            TimerManager.SetTimer(
+                StaminaAutoRecoveryTimerHandle,
+                this,
+                &UStatComponent::StaminaAutoRecovery,
+                AutoRecoveryData.TickInterval,
+                true,
+                AutoRecoveryData.CoolTime
+            );
+        }
 
         OnStaminaChange.Broadcast(CurrentStamina, MaxStamina);
 
@@ -68,6 +72,7 @@ bool UStatComponent::ConsumeStamina_Implementation(float InAmount)
 
 void UStatComponent::RecoveryStamina_Implementation(float InAmount)
 {
+    InAmount = FMath::Max(InAmount, 0.0f);
     CurrentStamina = FMath::Clamp(CurrentStamina + InAmount, 0.0f, MaxStamina);
     OnStaminaChange.Broadcast(CurrentStamina, MaxStamina);
 

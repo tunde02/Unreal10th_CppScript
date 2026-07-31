@@ -52,16 +52,22 @@ void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData
     // 새 무기 장비
     CurrentWeaponData = InWeaponData;
 
-    if (!InWeaponData->IsLoaded())
+    if (!CurrentWeaponData)
+    {
+        return;
+    }
+
+    // 에셋이 로딩 안됐으면 로딩 요청
+    if (!CurrentWeaponData->IsLoaded())
     {
         // 현재 요청을 람다 함수에 캡처하기 위한 변수
-        UWeaponDataAsset* RequestedData = InWeaponData;
+        UWeaponDataAsset* RequestedData = CurrentWeaponData;
 
         // 람다 함수는 로딩이 완료됐을 때 실행된다
         // 만약 로딩 중에 다른 무기를 장착하는 요청이 들어올 경우
         // 장착 요청한 무기와 람다 함수에서 스폰된 무기가 달라진다
         // 따라서 현재 장착 요청한 무기와 캡처해서 넘겼던 무기 데이터가 같을 때만 스폰
-        InWeaponData->RequestDataLoad(
+        CurrentWeaponData->RequestDataLoad(
             FStreamableDelegate::CreateWeakLambda(
                 this,
                 [this, RequestedData]() {
@@ -73,6 +79,7 @@ void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData
             )
         );
     }
+    // 에셋이 로딩 된 상태면 바로 무기 소환 및 장착
     else
     {
         SpawnWeaponActor();
@@ -87,7 +94,7 @@ void AActionCharacter::EquipBasicWeapon_Implementation()
         CurrentWeapon = nullptr;
     }
 
-    CurrentWeaponData = BasicWeaponData;
+    CurrentWeaponData = DefaultWeaponData;
 
     SpawnWeaponActor();
 }
@@ -140,7 +147,11 @@ void AActionCharacter::BeginPlay()
         StatComponent->Initialize(Data);
     }
 
-    IWeaponUserInterface::Execute_EquipBasicWeapon(this);
+    if (DefaultWeaponData)
+    {
+        IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
+        //IWeaponUserInterface::Execute_EquipBasicWeapon(this); // DEPRECATED
+    }
 }
 
 // Called every frame
@@ -240,7 +251,8 @@ float AActionCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Damag
     {
         IHealthInterface::Execute_DamageHealth(StatComp, Damage);
 
-        UE_LOG(LogTemp, Log, TEXT("%.1f 데미지를 입었습니다. (공격자: %s)"), Damage, *EventInstigator->GetName());
+        UE_LOG(LogTemp, Log, TEXT("%.1f 데미지를 입었습니다. (공격자: %s)"), Damage,
+               EventInstigator ? *EventInstigator->GetName() : TEXT("알 수 없음"));
     }
 
     return Damage;
