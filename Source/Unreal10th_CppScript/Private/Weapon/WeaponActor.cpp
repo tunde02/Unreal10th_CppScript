@@ -39,6 +39,7 @@ AWeaponActor::AWeaponActor()
 
     TrailVfx = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailVfx"));
     TrailVfx->SetupAttachment(Mesh);
+    TrailVfx->bAutoActivate = false;
 }
 
 void AWeaponActor::InitializeWeapon(UWeaponDataAsset* InData)
@@ -79,7 +80,7 @@ void AWeaponActor::DropWeapon()
     FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
     DetachFromActor(DetachRules);
 
-    Mesh->SetCollisionProfileName(TEXT("Ragdoll"));
+    Mesh->SetCollisionProfileName(TEXT("PhysicsActor"));
     Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Ignore);
     Mesh->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);
     Mesh->SetCollisionResponseToChannel(ECC_Player, ECollisionResponse::ECR_Ignore);
@@ -210,11 +211,13 @@ void AWeaponActor::AttackEnable(bool bEnable)
     if (bEnable)
     {
         HitArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        TrailVfx->SetActive(true);
         //CurrentUseCount--;
         //UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
     }
     else
     {
         HitArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        TrailVfx->SetActive(false);
     }
 }
