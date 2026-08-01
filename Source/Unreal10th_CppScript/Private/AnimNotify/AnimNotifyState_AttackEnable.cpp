@@ -2,25 +2,31 @@
 
 
 #include "AnimNotify/AnimNotifyState_AttackEnable.h"
+
 #include "Player/ActionCharacter.h"
+#include "Component/WeaponComponent.h"
 
 void UAnimNotifyState_AttackEnable::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
     Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
-    IWeaponUserInterface* WeaponOwner = Cast<IWeaponUserInterface>(MeshComp->GetOwner());
-    if (WeaponOwner)
+    if (IWeaponUserInterface* WeaponOwner = Cast<IWeaponUserInterface>(MeshComp->GetOwner()))
     {
-        WeaponOwner->OnWeaponAttackState(true);
+        if (UWeaponComponent* WeaponComp = WeaponOwner->GetWeaponComponent())
+        {
+            WeaponComp->OnWeaponAttackState(true);
+        }
     }
 }
 
 void UAnimNotifyState_AttackEnable::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
-    IWeaponUserInterface* WeaponOwner = Cast<IWeaponUserInterface>(MeshComp->GetOwner());
-    if (WeaponOwner)
+    if (IWeaponUserInterface* WeaponOwner = Cast<IWeaponUserInterface>(MeshComp->GetOwner()))
     {
-        WeaponOwner->OnWeaponAttackState(false);
+        if (UWeaponComponent* WeaponComp = WeaponOwner->GetWeaponComponent())
+        {
+            WeaponComp->OnWeaponAttackState(false);
+        }
     }
 
     Super::NotifyEnd(MeshComp, Animation, EventReference);

@@ -6,12 +6,8 @@
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 #include "AnimNotifyState_AttackEnable.generated.h"
 
-//class AActionCharacter;
 class IWeaponUserInterface;
 
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UAnimNotifyState_AttackEnable : public UAnimNotifyState
 {

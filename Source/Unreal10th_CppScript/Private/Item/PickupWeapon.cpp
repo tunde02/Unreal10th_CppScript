@@ -2,14 +2,16 @@
 
 
 #include "Item/PickupWeapon.h"
+
+#include "Weapon/WeaponActor.h"
+#include "Interface/WeaponUserInterface.h"
+#include "Component/WeaponComponent.h"
+#include "Data/WeaponDataAsset.h"
+
 #include "Components/SphereComponent.h"
 #include "Curves/CurveFloat.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
-
-#include "Weapon/WeaponActor.h"
-#include "Interface/WeaponUserInterface.h"
-#include "Data/WeaponDataAsset.h"
 
 void APickupWeapon::BeginPlay()
 {
@@ -102,7 +104,14 @@ void APickupWeapon::OnFinishPickupEffect()
             PickupVfx,
             TargetActor->GetActorLocation()
         );
-        IWeaponUserInterface::Execute_EquipWeapon(TargetActor.Get(), WeaponData);
+
+        if (IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(TargetActor.Get()))
+        {
+            if (UWeaponComponent* WeaponComp = WeaponUser->GetWeaponComponent())
+            {
+                WeaponComp->EquipWeapon(WeaponData);
+            }
+        }
     }
 
     GetWorldTimerManager().ClearTimer(PickupEffectTimerHandle);

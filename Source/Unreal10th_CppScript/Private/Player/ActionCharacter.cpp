@@ -2,18 +2,20 @@
 
 
 #include "Player/ActionCharacter.h"
+
+#include "Component/StatComponent.h"
+#include "Component/WeaponComponent.h"
+#include "Interface/StaminaInterface.h"
+#include "AnimNotify/AnimNotifyState_SectionJump.h"
+#include "Data/WeaponDataAsset.h"
+#include "Weapon/WeaponActor.h"
+
 #include "EnhancedInputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Animation/AnimMontage.h"
-
-#include "Component/StatComponent.h"
-#include "Interface/StaminaInterface.h"
-#include "AnimNotify/AnimNotifyState_SectionJump.h"
-#include "Data/WeaponDataAsset.h"
-#include "Weapon/WeaponActor.h"
 
 AActionCharacter::AActionCharacter()
 {
@@ -28,77 +30,10 @@ AActionCharacter::AActionCharacter()
     CameraComponent->SetupAttachment(CameraSpringArmComponent);
 
     StatComponent = CreateDefaultSubobject<UStatComponent>(TEXT("Stat"));
+    WeaponComponent = CreateDefaultSubobject<UWeaponComponent>(TEXT("Weapon"));
 
     bUseControllerRotationYaw = false; // 컨트롤러를 움질일 때 폰이 같이 회전되는 것 방지
     GetCharacterMovement()->bOrientRotationToMovement = true; // 캐릭터 이동 방향으로 바라보게 만들기
-}
-
-void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData)
-{
-    // 같은 종류의 무기 장비
-    if (InWeaponData == CurrentWeaponData)
-    {
-        CurrentWeapon->ResetUseCount();
-    }
-    // 다른 종류의 무기 장비
-    else
-    {
-        // 이전 무기 해제
-        if (CurrentWeapon.IsValid())
-        {
-            CurrentWeapon->DropWeapon();
-            CurrentWeapon = nullptr;
-        }
-
-        // 새 무기 장비
-        CurrentWeaponData = InWeaponData;
-
-        if (!CurrentWeaponData)
-        {
-            return;
-        }
-
-        // 에셋이 로딩 안됐으면 로딩 요청
-        if (!CurrentWeaponData->IsLoaded())
-        {
-            // 현재 요청을 람다 함수에 캡처하기 위한 변수
-            UWeaponDataAsset* RequestedData = CurrentWeaponData;
-
-            // 람다 함수는 로딩이 완료됐을 때 실행된다
-            // 만약 로딩 중에 다른 무기를 장착하는 요청이 들어올 경우
-            // 장착 요청한 무기와 람다 함수에서 스폰된 무기가 달라진다
-            // 따라서 현재 장착 요청한 무기와 캡처해서 넘겼던 무기 데이터가 같을 때만 스폰
-            CurrentWeaponData->RequestDataLoad(
-                FStreamableDelegate::CreateWeakLambda(
-                    this,
-                    [this, RequestedData]() {
-                        if (CurrentWeaponData == RequestedData)
-                        {
-                            SpawnWeaponActorAndEquip();
-                        }
-                    }
-                )
-            );
-        }
-        // 에셋이 로딩 된 상태면 바로 무기 소환 및 장착
-        else
-        {
-            SpawnWeaponActorAndEquip();
-        }
-    }
-}
-
-void AActionCharacter::OnWeaponDrop(UWeaponDataAsset* InDropWeaponData)
-{
-    if (DefaultWeaponData && (DefaultWeaponData != InDropWeaponData))
-    {
-        IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
-    }
-}
-
-void AActionCharacter::OnWeaponAttackState(bool bEnable)
-{
-    OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
 }
 
 UStatComponent* AActionCharacter::GetStatComponent() const
@@ -106,10 +41,15 @@ UStatComponent* AActionCharacter::GetStatComponent() const
     return StatComponent;
 }
 
+UWeaponComponent* AActionCharacter::GetWeaponComponent() const
+{
+    return WeaponComponent;
+}
+
 void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
 {
     SectionJumpNotify = InSectionJumpNotify;
-    bComboReady = SectionJumpNotify.IsValid();
+    WeaponComponent->SetComboReady(SectionJumpNotify.IsValid());
 }
 
 void AActionCharacter::BeginPlay()
@@ -144,9 +84,9 @@ void AActionCharacter::BeginPlay()
         StatComponent->Initialize(Data);
     }
 
-    if (DefaultWeaponData)
+    if (WeaponComponent)
     {
-        IWeaponUserInterface::Execute_EquipWeapon(this, DefaultWeaponData);
+        WeaponComponent->Initialize();
     }
 }
 
@@ -222,8 +162,8 @@ void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
 {
     if (AnimInstance
         && IStaminaInterface::Execute_GetCurrentStamina(GetStatComponent()) > AttackCost
-        && CurrentWeapon.IsValid()
-        && CurrentWeapon.Get()->CanUse())
+        && WeaponComponent->IsCurrentWeaponValid()
+        && WeaponComponent->CanCurrentWeaponUse())
     {
         // 다른 몽타주가 재생중이지 않을 때만 공격
         if (!AnimInstance->IsAnyMontagePlaying())
@@ -232,10 +172,10 @@ void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
             PlayAnimMontage(AttackMontage);
 
             FOnMontageEnded AttackEndDelegate;
-            AttackEndDelegate.BindUObject(this, &AActionCharacter::OnAttackEnded);
+            AttackEndDelegate.BindUObject(WeaponComponent, &UWeaponComponent::OnAttackEnded);
             AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
 
-            OnWeaponAttackState(false);
+            WeaponComponent->OnWeaponAttackState(false);
             IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
         }
         // 공격 중일 때 또 공격하면, 다음 콤보 재생
@@ -307,10 +247,10 @@ void AActionCharacter::SpendSprintStamina(float DeltaTime)
 
 void AActionCharacter::SectionJumpForCombo()
 {
-    if (SectionJumpNotify.IsValid() && bComboReady)
+    if (SectionJumpNotify.IsValid() && WeaponComponent->IsComboReady())
     {
         // 콤보로 몽타주가 시작되었다 -> 이전 애니메이션이 끝났다 -> 횟수를 감소시킨다
-        OnAttackEnded(nullptr, true);
+        WeaponComponent->OnAttackEnded(nullptr, true);
 
         UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage();
         AnimInstance->Montage_SetNextSection(
@@ -320,38 +260,11 @@ void AActionCharacter::SectionJumpForCombo()
         );
 
         FOnMontageEnded AttackEndDelegate;
-        AttackEndDelegate.BindUObject(this, &AActionCharacter::OnAttackEnded);
+        AttackEndDelegate.BindUObject(WeaponComponent, &UWeaponComponent::OnAttackEnded);
         AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
 
-        OnWeaponAttackState(false);
+        WeaponComponent->OnWeaponAttackState(false);
         IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
-        bComboReady = false;
-    }
-}
-
-void AActionCharacter::SpawnWeaponActorAndEquip()
-{
-    // 무기 로딩이 끝나기 전에 장착 해제했으면
-    // 무기를 스폰할 필요 없음
-    if (!CurrentWeaponData)
-    {
-        return;
-    }
-
-    CurrentWeapon = GetWorld()->SpawnActorDeferred<AWeaponActor>(AWeaponActor::StaticClass(), FTransform::Identity, this, this);
-    if (CurrentWeapon.IsValid())
-    {
-        CurrentWeapon->InitializeWeapon(CurrentWeaponData);
-        CurrentWeapon->OnWeaponDrop.BindUObject(this, &AActionCharacter::OnWeaponDrop);
-        UGameplayStatics::FinishSpawningActor(CurrentWeapon.Get(), FTransform::Identity);
-        CurrentWeapon->EquipToTarget(this);
-    }
-}
-
-void AActionCharacter::OnAttackEnded(UAnimMontage* InMontage, bool bInterrupted)
-{
-    if (CurrentWeapon.IsValid())
-    {
-        CurrentWeapon->Use();
+        WeaponComponent->SetComboReady(false);
     }
 }

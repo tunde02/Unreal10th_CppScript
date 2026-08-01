@@ -2,18 +2,20 @@
 
 
 #include "Weapon/WeaponActor.h"
+
+#include "Interface/WeaponUserInterface.h"
+#include "Interface/StatInterface.h"
+#include "Interface/HealthInterface.h"
+#include "Component/StatComponent.h"
+#include "Component/WeaponComponent.h"
+#include "Data/WeaponDataAsset.h"
+
 #include "Unreal10th_CppScript/Unreal10th_CppScript.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
-
-#include "Interface/WeaponUserInterface.h"
-#include "Interface/StatInterface.h"
-#include "Interface/HealthInterface.h"
-#include "Component/StatComponent.h"
-#include "Data/WeaponDataAsset.h"
 
 AWeaponActor::AWeaponActor()
 {
@@ -71,10 +73,12 @@ void AWeaponActor::EquipToTarget(AActor* InTarget)
 
 void AWeaponActor::DropWeapon()
 {
-    IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter);
-    if (WeaponUser)
+    if (IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter))
     {
-        WeaponUser->GetWeaponAttackStateChangedDelegate().Clear();
+        if (UWeaponComponent* WeaponComp = WeaponUser->GetWeaponComponent())
+        {
+            WeaponComp->GetWeaponAttackStateChangedDelegate().Clear();
+        }
     }
 
     FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);
@@ -137,7 +141,6 @@ void AWeaponActor::ResetUseCount()
 {
     CurrentUseCount = WeaponData->UseCount;
     UE_LOG(LogTemp, Log, TEXT("%s의 남은 무기 사용 횟수 : %d"), *GetName(), CurrentUseCount);
-
 }
 
 void AWeaponActor::BeginPlay()
@@ -191,6 +194,7 @@ void AWeaponActor::OnEquipped(AActor* InOwner)
 
     SetOwner(InOwner);
     OwnerCharacter = Cast<ACharacter>(InOwner);
+
     FAttachmentTransformRules AttachRules(
         EAttachmentRule::SnapToTarget,
         EAttachmentRule::SnapToTarget,
@@ -208,10 +212,12 @@ void AWeaponActor::OnEquipped(AActor* InOwner)
         // 자기 자신과 충돌하지 않도록 설정
         HitArea->IgnoreActorWhenMoving(OwnerCharacter.Get(), true);
 
-        IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter);
-        if (WeaponUser)
+        if (IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(OwnerCharacter))
         {
-            WeaponUser->GetWeaponAttackStateChangedDelegate().BindUFunction(this, FName("AttackEnable"));
+            if (UWeaponComponent* WeaponComp = WeaponUser->GetWeaponComponent())
+            {
+                WeaponComp->GetWeaponAttackStateChangedDelegate().BindUFunction(this, FName("AttackEnable"));
+            }
         }
     }
 }
