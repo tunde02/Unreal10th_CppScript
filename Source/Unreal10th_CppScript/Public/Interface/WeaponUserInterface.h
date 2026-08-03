@@ -23,4 +23,7 @@ class UNREAL10TH_CPPSCRIPT_API IWeaponUserInterface
 public:
     virtual UWeaponComponent* GetWeaponComponent() const = 0;
 
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+    void EquipWeapon(UWeaponDataAsset* InWeaponData);
+
 };

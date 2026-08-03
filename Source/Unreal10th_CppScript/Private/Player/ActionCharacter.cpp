@@ -36,6 +36,14 @@ AActionCharacter::AActionCharacter()
     GetCharacterMovement()->bOrientRotationToMovement = true; // 캐릭터 이동 방향으로 바라보게 만들기
 }
 
+void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData)
+{
+    if (GetWeaponComponent())
+    {
+        WeaponComponent->EquipWeapon(InWeaponData);
+    }
+}
+
 UStatComponent* AActionCharacter::GetStatComponent() const
 {
     return StatComponent;
@@ -44,12 +52,6 @@ UStatComponent* AActionCharacter::GetStatComponent() const
 UWeaponComponent* AActionCharacter::GetWeaponComponent() const
 {
     return WeaponComponent;
-}
-
-void AActionCharacter::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
-{
-    SectionJumpNotify = InSectionJumpNotify;
-    WeaponComponent->SetComboReady(SectionJumpNotify.IsValid());
 }
 
 void AActionCharacter::BeginPlay()
@@ -162,26 +164,13 @@ void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
 {
     if (AnimInstance
         && IStaminaInterface::Execute_GetCurrentStamina(GetStatComponent()) > AttackCost
-        && WeaponComponent->IsCurrentWeaponValid()
-        && WeaponComponent->CanCurrentWeaponUse())
+        && GetWeaponComponent()
+        && GetWeaponComponent()->CanWeaponUse())
     {
-        // 다른 몽타주가 재생중이지 않을 때만 공격
-        if (!AnimInstance->IsAnyMontagePlaying())
+        bool bAttack = GetWeaponComponent()->OnAttack();
+        if (bAttack)
         {
-            // 첫 번째 콤보 공격
-            PlayAnimMontage(AttackMontage);
-
-            FOnMontageEnded AttackEndDelegate;
-            AttackEndDelegate.BindUObject(WeaponComponent, &UWeaponComponent::OnAttackEnded);
-            AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
-
-            WeaponComponent->OnWeaponAttackState(false);
             IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
-        }
-        // 공격 중일 때 또 공격하면, 다음 콤보 재생
-        else if (AnimInstance->GetCurrentActiveMontage() == AttackMontage)
-        {
-            SectionJumpForCombo();
         }
     }
 }
@@ -242,29 +231,5 @@ void AActionCharacter::SpendSprintStamina(float DeltaTime)
             // 스태미나가 다 떨어지면 달리기 모드 정지
             OnSprintEnd();
         }
-    }
-}
-
-void AActionCharacter::SectionJumpForCombo()
-{
-    if (SectionJumpNotify.IsValid() && WeaponComponent->IsComboReady())
-    {
-        // 콤보로 몽타주가 시작되었다 -> 이전 애니메이션이 끝났다 -> 횟수를 감소시킨다
-        WeaponComponent->OnAttackEnded(nullptr, true);
-
-        UAnimMontage* Current = AnimInstance->GetCurrentActiveMontage();
-        AnimInstance->Montage_SetNextSection(
-            AnimInstance->Montage_GetCurrentSection(),
-            SectionJumpNotify->GetNextSectionName(),
-            Current
-        );
-
-        FOnMontageEnded AttackEndDelegate;
-        AttackEndDelegate.BindUObject(WeaponComponent, &UWeaponComponent::OnAttackEnded);
-        AnimInstance->Montage_SetEndDelegate(AttackEndDelegate, AttackMontage);
-
-        WeaponComponent->OnWeaponAttackState(false);
-        IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);
-        WeaponComponent->SetComboReady(false);
     }
 }

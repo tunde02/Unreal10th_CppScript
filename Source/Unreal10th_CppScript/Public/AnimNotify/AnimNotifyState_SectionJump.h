@@ -6,11 +6,6 @@
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 #include "AnimNotifyState_SectionJump.generated.h"
 
-class AActionCharacter;
-
-/**
- *
- */
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UAnimNotifyState_SectionJump : public UAnimNotifyState
 {

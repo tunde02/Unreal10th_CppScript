@@ -107,10 +107,11 @@ void APickupWeapon::OnFinishPickupEffect()
 
         if (IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(TargetActor.Get()))
         {
-            if (UWeaponComponent* WeaponComp = WeaponUser->GetWeaponComponent())
-            {
-                WeaponComp->EquipWeapon(WeaponData);
-            }
+            IWeaponUserInterface::Execute_EquipWeapon(TargetActor.Get(), WeaponData);
+            //if (UWeaponComponent* WeaponComp = WeaponUser->GetWeaponComponent())
+            //{
+            //    WeaponComp->EquipWeapon(WeaponData);
+            //}
         }
     }
 

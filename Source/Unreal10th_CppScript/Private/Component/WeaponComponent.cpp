@@ -1,10 +1,14 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Component/WeaponComponent.h"
+#include "AnimNotify/AnimNotifyState_SectionJump.h"
 #include "Data/WeaponDataAsset.h"
 #include "Weapon/WeaponActor.h"
+#include "Interface/WeaponUserInterface.h"
+
 #include "Kismet/GameplayStatics.h"
+#include "GameFramework/Character.h"
 
 UWeaponComponent::UWeaponComponent()
 {
@@ -13,6 +17,36 @@ UWeaponComponent::UWeaponComponent()
     PrimaryComponentTick.bCanEverTick = false;
 
     // ...
+}
+
+bool UWeaponComponent::OnAttack()
+{
+    if (!OwnerCharacter.IsValid() || !OwnerAnimInstance.IsValid())
+    {
+        return false;
+    }
+
+    bool bResult = false;
+
+    if (!OwnerAnimInstance->IsAnyMontagePlaying())
+    {
+        // 첫번째 콤보 공격
+        OwnerCharacter->PlayAnimMontage(CurrentWeaponData->AttackMontage);
+
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &UWeaponComponent::OnAttackEnded);
+        OwnerAnimInstance->Montage_SetEndDelegate(EndDelegate, CurrentWeaponData->AttackMontage);
+
+        OnWeaponAttackState(false);
+
+        bResult = true;
+    }
+    else if (OwnerAnimInstance->GetCurrentActiveMontage() == CurrentWeaponData->AttackMontage)
+    {
+        bResult = SectionJumpForCombo();
+    }
+
+    return bResult;
 }
 
 void UWeaponComponent::Initialize()
@@ -86,31 +120,52 @@ void UWeaponComponent::OnWeaponDrop(UWeaponDataAsset* InDropWeaponData)
     }
 }
 
-void UWeaponComponent::OnWeaponAttackState(bool bEnable) const
+void UWeaponComponent::OnWeaponAttackState(bool bEnable)
 {
     OnWeaponAttackStateChanged.ExecuteIfBound(bEnable);
 }
 
-bool UWeaponComponent::IsCurrentWeaponValid() const
+bool UWeaponComponent::CanWeaponUse() const
 {
-    return CurrentWeapon.IsValid();;
+    return CurrentWeapon.IsValid() && CurrentWeapon->CanUse();
 }
 
-bool UWeaponComponent::CanCurrentWeaponUse() const
+void UWeaponComponent::SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify)
 {
-    return CurrentWeapon->CanUse();;
+    SectionJumpNotify = InSectionJumpNotify;
+    bComboReady = SectionJumpNotify.IsValid();
+}
+
+void UWeaponComponent::BeginPlay()
+{
+    Super::BeginPlay();
+
+    OwnerCharacter = Cast<ACharacter>(GetOwner());
+
+    if (OwnerCharacter.IsValid())
+    {
+        if (OwnerCharacter->GetMesh())
+        {
+            OwnerAnimInstance = OwnerCharacter->GetMesh()->GetAnimInstance();
+        }
+    }
+
+    if (DefaultWeaponData)
+    {
+        IWeaponUserInterface::Execute_EquipWeapon(OwnerCharacter.Get(), DefaultWeaponData);
+    }
 }
 
 void UWeaponComponent::SpawnWeaponActorAndEquip()
 {
     // 무기 로딩이 끝나기 전에 장착 해제했으면
     // 무기를 스폰할 필요 없음
-    if (!CurrentWeaponData)
+    if (!CurrentWeaponData || !OwnerCharacter.IsValid())
     {
         return;
     }
 
-    CurrentWeapon = GetWorld()->SpawnActorDeferred<AWeaponActor>(AWeaponActor::StaticClass(), FTransform::Identity, GetOwner(), Cast<APawn>(GetOwner()));
+    CurrentWeapon = GetWorld()->SpawnActorDeferred<AWeaponActor>(AWeaponActor::StaticClass(), FTransform::Identity, OwnerCharacter.Get(), OwnerCharacter.Get());
     if (CurrentWeapon.IsValid())
     {
         CurrentWeapon->InitializeWeapon(CurrentWeaponData);
@@ -118,6 +173,40 @@ void UWeaponComponent::SpawnWeaponActorAndEquip()
         UGameplayStatics::FinishSpawningActor(CurrentWeapon.Get(), FTransform::Identity);
         CurrentWeapon->EquipToTarget(GetOwner());
     }
+}
+
+bool UWeaponComponent::SectionJumpForCombo()
+{
+    if (!OwnerAnimInstance.IsValid())
+    {
+        return false;
+    }
+
+    bool bResult = false;
+
+    if (SectionJumpNotify.IsValid() && bComboReady)
+    {
+        // 콤보로 몽타주가 시작되었다 -> 이전 애니메이션이 끝났다 -> 횟수를 감소시킨다
+        OnAttackEnded(nullptr, true);
+
+        UAnimMontage* Current = OwnerAnimInstance->GetCurrentActiveMontage();
+        OwnerAnimInstance->Montage_SetNextSection(
+            OwnerAnimInstance->Montage_GetCurrentSection(),
+            SectionJumpNotify->GetNextSectionName(),
+            Current
+        );
+
+        FOnMontageEnded EndDelegate;
+        EndDelegate.BindUObject(this, &UWeaponComponent::OnAttackEnded);
+        OwnerAnimInstance->Montage_SetEndDelegate(EndDelegate, CurrentWeaponData->AttackMontage);
+
+        OnWeaponAttackState(false);
+        bComboReady = false;
+
+        bResult = true;
+    }
+
+    return bResult;
 }
 
 void UWeaponComponent::OnAttackEnded(UAnimMontage* InMontage, bool bInterrupted)

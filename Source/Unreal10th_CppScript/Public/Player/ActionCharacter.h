@@ -27,14 +27,14 @@ class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public ISta
 public:
     AActionCharacter();
 
+    virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
+
     /* Getter, Setter */
     UFUNCTION(BlueprintCallable, Category = "Stat")
     virtual UStatComponent* GetStatComponent() const override;
 
     UFUNCTION(BlueprintCallable, Category = "Weapon")
     virtual UWeaponComponent* GetWeaponComponent() const override;
-
-    void SetSectionJumpNotify(UAnimNotifyState_SectionJump* InSectionJumpNotify);
 
 protected:
     virtual void BeginPlay() override;
@@ -52,8 +52,6 @@ protected:
 
 private:
     void SpendSprintStamina(float DeltaTime);
-
-    void SectionJumpForCombo();
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -120,7 +118,5 @@ private:
     TObjectPtr<UAnimInstance> AnimInstance = nullptr;
 
     bool bSprintMode = false;
-
-    TWeakObjectPtr<UAnimNotifyState_SectionJump> SectionJumpNotify = nullptr; // 발생한 콤보 노티파이를 저장해 놓는 변수
 
 };

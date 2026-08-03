@@ -148,6 +148,7 @@ void AWeaponActor::BeginPlay()
     Super::BeginPlay();
 
     HitArea->OnComponentBeginOverlap.AddDynamic(this, &AWeaponActor::OnHitAreaBeginOverlap);
+    TrailVfx->Deactivate();
 }
 
 void AWeaponActor::OnHitAreaBeginOverlap(UPrimitiveComponent* InOverlappedComponent, AActor* InOtherActor, UPrimitiveComponent* InOtherComp, int32 InOtherBodyIndex, bool bFromSweep, const FHitResult& InSweepResult)
@@ -175,13 +176,13 @@ void AWeaponActor::AttackEnable(bool bEnable)
     if (bEnable)
     {
         HitArea->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-        TrailVfx->SetActive(true);
+        TrailVfx->Activate();
         UE_LOG(LogTemp, Log, TEXT("남은 무기 사용 가능 횟수 : %d"), CurrentUseCount);
     }
     else
     {
         HitArea->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        TrailVfx->SetActive(false);
+        TrailVfx->Deactivate();
     }
 }
 

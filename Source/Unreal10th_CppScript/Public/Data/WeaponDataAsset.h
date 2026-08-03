@@ -58,4 +58,7 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
     TSoftObjectPtr<UNiagaraSystem> WeaponHitVfx;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
+    TObjectPtr<UAnimMontage> AttackMontage = nullptr;
+
 };
