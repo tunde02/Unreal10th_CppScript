@@ -47,6 +47,18 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
     float AttackPower = 20.0f;
 
+    // 무기의 범위 공격력
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
+    float AreaAttackPower = 20.0f;
+
+    // 범위 공격의 안쪽 반지름
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
+    float AreaAttackInnerRadius = 100.0f;
+
+    // 범위 공격의 바깥쪽 반지름
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
+    float AreaAttackOuterRadius = 300.0f;
+
     // 무기 사용 횟수
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
     int32 UseCount = 3;

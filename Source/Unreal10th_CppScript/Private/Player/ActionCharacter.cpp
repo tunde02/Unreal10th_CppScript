@@ -85,11 +85,6 @@ void AActionCharacter::BeginPlay()
             StaminaAutoRecoveryAmountPerTick);
         StatComponent->Initialize(Data);
     }
-
-    if (WeaponComponent)
-    {
-        WeaponComponent->Initialize();
-    }
 }
 
 void AActionCharacter::Tick(float DeltaTime)
@@ -167,7 +162,7 @@ void AActionCharacter::OnAttackAction(const FInputActionValue& InValue)
         && GetWeaponComponent()
         && GetWeaponComponent()->CanWeaponUse())
     {
-        bool bAttack = GetWeaponComponent()->OnAttack();
+        bool bAttack = GetWeaponComponent()->Attack();
         if (bAttack)
         {
             IStaminaInterface::Execute_ConsumeStamina(GetStatComponent(), AttackCost);

@@ -20,7 +20,9 @@ class UNREAL10TH_CPPSCRIPT_API UWeaponComponent : public UActorComponent
 public:
     UWeaponComponent();
 
-    bool OnAttack();
+    bool Attack();
+
+    void AreaAttack();
 
     void Initialize();
 

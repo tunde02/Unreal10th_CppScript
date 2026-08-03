@@ -143,6 +143,11 @@ void AWeaponActor::ResetUseCount()
     UE_LOG(LogTemp, Log, TEXT("%s의 남은 무기 사용 횟수 : %d"), *GetName(), CurrentUseCount);
 }
 
+FVector AWeaponActor::GetWeaponImpactLocation() const
+{
+    return FMath::Lerp(Mesh->GetSocketLocation(TEXT("Base")), Mesh->GetSocketLocation(TEXT("Tip")), 0.5f);
+}
+
 void AWeaponActor::BeginPlay()
 {
     Super::BeginPlay();

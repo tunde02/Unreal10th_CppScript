@@ -38,6 +38,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void ResetUseCount();
 
+    UFUNCTION(BlueprintCallable)
+    FVector GetWeaponImpactLocation() const;
+
 protected:
     virtual void BeginPlay() override;
 
