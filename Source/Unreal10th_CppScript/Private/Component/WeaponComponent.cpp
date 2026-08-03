@@ -2,6 +2,7 @@
 
 
 #include "Component/WeaponComponent.h"
+
 #include "Unreal10th_CppScript/Unreal10th_CppScript.h"
 #include "AnimNotify/AnimNotifyState_SectionJump.h"
 #include "Data/WeaponDataAsset.h"
@@ -59,38 +60,38 @@ void UWeaponComponent::AreaAttack()
 
     // 디버그 정보 출력
     DrawDebugSphere(
-        GetWorld(),
-        CurrentWeapon->GetWeaponImpactLocation(),
-        CurrentWeaponData->AreaAttackInnerRadius,
-        12,
-        FColor::Red,
-        false,
-        5.0f
+        /* InWorld          */ GetWorld(),
+        /* Center           */ CurrentWeapon->GetWeaponImpactLocation(),
+        /* Radius           */ CurrentWeaponData->AreaAttackInnerRadius,
+        /* Segments         */ 12,
+        /* Color            */ FColor::Red,
+        /* bPersistentLines */ false,
+        /* LifeTime         */ 5.0f
     );
     DrawDebugSphere(
-        GetWorld(),
-        CurrentWeapon->GetWeaponImpactLocation(),
-        CurrentWeaponData->AreaAttackOuterRadius,
-        12,
-        FColor::Yellow,
-        false,
-        5.0f
+        /* InWorld          */ GetWorld(),
+        /* Center           */ CurrentWeapon->GetWeaponImpactLocation(),
+        /* Radius           */ CurrentWeaponData->AreaAttackOuterRadius,
+        /* Segments         */ 12,
+        /* Color            */ FColor::Yellow,
+        /* bPersistentLines */ false,
+        /* LifeTime         */ 5.0f
     );
 
     TArray<AActor*> IgnoreActors = { CurrentWeapon.Get(), OwnerCharacter.Get() };
     UGameplayStatics::ApplyRadialDamageWithFalloff(
-        GetWorld(),
-        CurrentWeaponData->AreaAttackPower,
-        1.0f,
-        CurrentWeapon->GetWeaponImpactLocation(),
-        CurrentWeaponData->AreaAttackInnerRadius,
-        CurrentWeaponData->AreaAttackOuterRadius,
-        1.0f,
-        nullptr,
-        IgnoreActors,
-        CurrentWeapon.Get(),
-        OwnerCharacter->GetController(),
-        ECC_Enemy
+        /* WorldContextObject      */ GetWorld(),
+        /* BaseDamage              */ CurrentWeaponData->AreaAttackPower,
+        /* MinimumDamage           */ 1.0f,
+        /* Origin                  */ CurrentWeapon->GetWeaponImpactLocation(),
+        /* DamageInnerRadius       */ CurrentWeaponData->AreaAttackInnerRadius,
+        /* DamageOuterRadius       */ CurrentWeaponData->AreaAttackOuterRadius,
+        /* DamageFalloff           */ 1.0f,
+        /* DamageTypeClass         */ nullptr,
+        /* DamageIgnoreActors      */ IgnoreActors,
+        /* DamageCauser            */ CurrentWeapon.Get(),
+        /* InstigatedByController  */ OwnerCharacter->GetController(),
+        /* DamagePreventionChannel */ ECC_Enemy
     );
 }
 

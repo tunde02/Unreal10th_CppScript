@@ -13,7 +13,7 @@ void UAnimNotify_AreaAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
     {
         if (UWorld* World = MeshComp->GetWorld())
         {
-            if (APlayerController* PC =  World->GetFirstPlayerController())
+            if (APlayerController* PC = World->GetFirstPlayerController())
             {
                 CameraManager = PC->PlayerCameraManager;
             }
