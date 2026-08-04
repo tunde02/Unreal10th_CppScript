@@ -3,6 +3,7 @@
 
 #include "Enemy/DummyEnemyActor.h"
 #include "Enemy/DamagePopupActor.h"
+#include "Test/TestVfxPlayer.h"
 
 #include "Framework/Subsystem/ObjectPoolSubsystem.h"
 
@@ -41,9 +42,14 @@ float ADummyEnemyActor::TakeDamage(float DamageAmount, FDamageEvent const& Damag
     if (UGameInstance* GameInstance = GetGameInstance())
     {
         UObjectPoolSubsystem* Subsystem = GameInstance->GetSubsystem<UObjectPoolSubsystem>();
-        AActor* SpawnedActor = Subsystem->Spawn(PopupTransform->GetComponentTransform());
+        //AActor* SpawnedActor = Subsystem->Spawn(PopupTransform->GetComponentTransform());
+        //ADamagePopupActor* DamagePopup = Cast<ADamagePopupActor>(SpawnedActor);
+        AActor* SpawnedActor = Subsystem->Spawn(DamagePopupClass, PopupTransform->GetComponentTransform());
         ADamagePopupActor* DamagePopup = Cast<ADamagePopupActor>(SpawnedActor);
         DamagePopup->OnPopupStart(Damage);
+
+        SpawnedActor = Subsystem->Spawn(TextVfxPlayerClass, PopupTransform->GetComponentTransform());
+        ATestVfxPlayer* TestVfxPlayer = Cast<ATestVfxPlayer>(SpawnedActor);
     }
 
     return Damage;

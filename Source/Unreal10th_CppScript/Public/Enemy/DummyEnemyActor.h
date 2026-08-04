@@ -30,4 +30,10 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<USceneComponent> PopupTransform = nullptr;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hello")
+    TSubclassOf<AActor> DamagePopupClass = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hello")
+    TSubclassOf<AActor> TextVfxPlayerClass = nullptr;
+
 };

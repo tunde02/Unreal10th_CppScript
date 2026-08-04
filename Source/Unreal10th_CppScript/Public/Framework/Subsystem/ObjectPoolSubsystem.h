@@ -6,6 +6,33 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "ObjectPoolSubsystem.generated.h"
 
+class UNiagaraSystem;
+
+USTRUCT()
+struct FObjectPool
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    TSubclassOf<AActor> ObjectClass;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<AActor>> ReadyActors;
+
+    UPROPERTY(Transient)
+    TSet<TObjectPtr<AActor>> ActiveActors;
+
+    FObjectPool()
+    {
+        ObjectClass = nullptr;
+    }
+
+    FObjectPool(TSubclassOf<AActor> InObjectClass)
+    {
+        ObjectClass = InObjectClass;
+    }
+};
+
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UObjectPoolSubsystem : public UGameInstanceSubsystem
 {
@@ -14,7 +41,9 @@ class UNREAL10TH_CPPSCRIPT_API UObjectPoolSubsystem : public UGameInstanceSubsys
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection);
     AActor* Spawn(const FTransform& InTransform);
+    AActor* Spawn(TSubclassOf<AActor> InActorClass, const FTransform& InTransform);
     void ReturnPool(AActor* InActor);
+    void ReturnPool(TSubclassOf<AActor> InActorClass, AActor* InActor);
 
     //template<typename T>
     //T MySpawn(const FTransform& InTransform);
@@ -31,14 +60,7 @@ protected:
     UPROPERTY()
     TSubclassOf<AActor> DamagePopupClass = nullptr;
 
-    //UPROPERTY(Transient)
-    //TMap<TSubclassOf<AActor>, TObjectPtr<AActor>> MyPool;
+    UPROPERTY()
+    TMap<TSubclassOf<AActor>, FObjectPool> GenericPoolMap;
 
 };
-//
-//template<typename T>
-//inline T UObjectPoolSubsystem::MySpawn(const FTransform& InTransform)
-//{
-//
-//    return MyPool[T];
-//}
