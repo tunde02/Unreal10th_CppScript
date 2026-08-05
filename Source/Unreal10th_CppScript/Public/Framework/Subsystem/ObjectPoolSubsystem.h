@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Data/ObjectPoolDataAsset.h"
 #include "ObjectPoolSubsystem.generated.h"
 
 class UNiagaraSystem;
@@ -20,10 +21,24 @@ struct FObjectPool
 
     // 실제 사용 중인 액터들
     UPROPERTY(Transient)
-    TSet<TObjectPtr<AActor>> ActiveActors;
+    TMap<double, TObjectPtr<AActor>> ActiveActors;
+
+    // 액터들이 사용되기 시작한 시간을 저장한 우선순위 큐
+    UPROPERTY(Transient)
+    //TMap<double, TObjectPtr<AActor>> ActivatedTimeSecondsMap;
+    TArray<double> ActivatedTimeSecondsQueue;
 
     UPROPERTY(Transient)
     int32 InitialSize = 0;
+
+    UPROPERTY(Transient)
+    int32 MaxSize = 0;
+
+    UPROPERTY(Transient)
+    EObjectPoolPolicy MaxPolicy = EObjectPoolPolicy::Grow;
+
+    int Size() const { return ReadyActors.Num() + ActiveActors.Num(); }
+    bool IsFull() const { return Size() >= MaxSize; }
 
 };
 
