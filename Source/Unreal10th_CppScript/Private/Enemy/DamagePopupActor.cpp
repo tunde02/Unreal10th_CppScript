@@ -34,9 +34,7 @@ void ADamagePopupActor::UseFinish()
     if (UGameInstance* GameInstance = GetGameInstance())
     {
         UObjectPoolSubsystem* Subsystem = GameInstance->GetSubsystem<UObjectPoolSubsystem>();
-        //Subsystem->ReturnPool(this);
-        Subsystem->ReturnPool(this->GetClass(), this);
-        //Subsystem->ReturnPool(this->StaticClass(), this);
+        Subsystem->ReturnPool(this);
     }
 }
 

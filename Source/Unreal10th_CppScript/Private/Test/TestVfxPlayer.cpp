@@ -24,7 +24,7 @@ void ATestVfxPlayer::UseFinish()
     if (UGameInstance* GameInstance = GetGameInstance())
     {
         UObjectPoolSubsystem* Subsystem = GameInstance->GetSubsystem<UObjectPoolSubsystem>();
-        Subsystem->ReturnPool(this->GetClass(), this);
+        Subsystem->ReturnPool(this);
     }
 }
 
@@ -32,13 +32,13 @@ void ATestVfxPlayer::OnSpawn_Implementation()
 {
     SetActorHiddenInGame(false);
     Vfx->Activate();
-
 }
 
 void ATestVfxPlayer::OnReturn_Implementation()
 {
     SetActorLocation(FVector(0.0f, 0.0f, -10000.0f));
     SetActorHiddenInGame(true);
+    Vfx->Deactivate();
 }
 
 // Called when the game starts or when spawned

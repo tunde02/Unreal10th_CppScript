@@ -4,6 +4,7 @@
 #include "Framework/Subsystem/ObjectPoolSubsystem.h"
 #include "Config/ObjectPoolSettings.h"
 #include "Interface/PoolableInterface.h"
+#include "Data/ObjectPoolDataAsset.h"
 
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
@@ -15,140 +16,178 @@ void UObjectPoolSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
     // 프로젝트 세팅에서 데이터 읽어오기
     const UObjectPoolSettings* Settings = GetDefault<UObjectPoolSettings>();
-    if (Settings)
-    {
-        //if (!Settings->DamagePopupClass.IsNull())
-        //{
-        //    DamagePopupClass = Settings->DamagePopupClass.LoadSynchronous();
-        //}
 
-        for (auto& PoolableClass : Settings->PoolableClasses)
+    if (!Settings)
+    {
+        return;
+    }
+
+    for (const TSoftObjectPtr<UObjectPoolDataAsset>& DataAsset : Settings->PoolableDataAssets)
+    {
+        if (!DataAsset.IsNull())
         {
-            if (!PoolableClass.IsNull())
-            {
-                TSubclassOf<AActor> LoadedClass = PoolableClass.LoadSynchronous();
-                GenericPoolMap.Add(LoadedClass, FObjectPool(LoadedClass));
-                UE_LOG(LogTemp, Display, TEXT("GenericPoolMap에 %s 풀 추가"), *LoadedClass->GetName());
-            }
+            TObjectPtr<UObjectPoolDataAsset> LoadedDataAsset = DataAsset.LoadSynchronous();
+            FObjectPool& Pool = ObjectPools.FindOrAdd(LoadedDataAsset->ActorClass.LoadSynchronous());
+            Pool.InitialSize = LoadedDataAsset->InitialSize;
+
+            UE_LOG(LogTemp, Log, TEXT("%s 풀 추가"), *LoadedDataAsset->GetName());
         }
     }
 }
 
-AActor* UObjectPoolSubsystem::Spawn(const FTransform& InTransform)
+void UObjectPoolSubsystem::Deinitialize()
 {
-    /*
-    AActor* Spawned = nullptr;
-    if (ReadyActors.Num() > 0)
-    {
-        Spawned = ReadyActors.Pop(); // 뒤에서부터 꺼내기
-        Spawned->SetActorTransform(InTransform);
-        UE_LOG(LogTemp, Display, TEXT("ObjectPoolSubsystem.Spawn() - 뒤에서부터 꺼내기"));
-    }
-    else
-    {
-        if (DamagePopupClass && GetWorld())
-        {
-            FActorSpawnParameters SpawnParam;
-            SpawnParam.Owner = nullptr;
-            SpawnParam.ObjectFlags = RF_Transient;
+    ClearAllPools();
 
-            Spawned = GetWorld()->SpawnActor<AActor>(DamagePopupClass, InTransform, SpawnParam);
-#if WITH_EDITOR
-            if (Spawned)
-            {
-                Spawned->SetFolderPath(FName("Pool"));
-                UE_LOG(LogTemp, Display, TEXT("ObjectPoolSubsystem.Spawn() - Pool 폴더에 새로 만들기"));
-            }
-#endif
-        }
-    }
-
-    UE_LOG(LogTemp, Display, TEXT("1"));
-    if (Spawned)
-    {
-        if (Spawned->GetClass()->ImplementsInterface(UPoolableInterface::StaticClass()))
-        {
-            IPoolableInterface::Execute_OnSpawn(Spawned);
-        }
-
-        ActiveActors.Add(Spawned);
-    }
-
-    return Spawned;
-    */
-
-    AActor* Spawned = nullptr;
-
-    if (ReadyActors.Num() > 0)
-    {
-        Spawned = ReadyActors.Pop(); // 뒤에서부터 꺼내기
-        Spawned->SetActorTransform(InTransform);
-        UE_LOG(LogTemp, Display, TEXT("ObjectPoolSubsystem.Spawn() - 뒤에서부터 꺼내기"));
-    }
-    else
-    {
-        if (DamagePopupClass && GetWorld())
-        {
-            FActorSpawnParameters SpawnParam;
-            SpawnParam.Owner = nullptr;
-            SpawnParam.ObjectFlags = RF_Transient;
-
-            Spawned = GetWorld()->SpawnActor<AActor>(DamagePopupClass, InTransform, SpawnParam);
-#if WITH_EDITOR
-            if (Spawned)
-            {
-                Spawned->SetFolderPath(FName("Pool"));
-                UE_LOG(LogTemp, Display, TEXT("ObjectPoolSubsystem.Spawn() - Pool 폴더에 새로 만들기"));
-            }
-#endif
-        }
-    }
-
-    UE_LOG(LogTemp, Display, TEXT("1"));
-    if (Spawned)
-    {
-        if (Spawned->GetClass()->ImplementsInterface(UPoolableInterface::StaticClass()))
-        {
-            IPoolableInterface::Execute_OnSpawn(Spawned);
-        }
-
-        ActiveActors.Add(Spawned);
-    }
-
-    return Spawned;
+    Super::Deinitialize();
 }
 
-AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InActorClass, const FTransform& InTransform)
+bool UObjectPoolSubsystem::RegisterPoolDataAsset(const UObjectPoolDataAsset* InDataAsset, bool bWarmup)
 {
-    AActor* Spawned = nullptr;
+    if (!InDataAsset || InDataAsset->ActorClass.IsNull())
+    {
+        return false;
+    }
 
-    if (!GenericPoolMap.Contains(InActorClass))
+    TSubclassOf<AActor> LoadedActorClass = InDataAsset->ActorClass.LoadSynchronous();
+
+    ClearPool(LoadedActorClass);
+
+    FObjectPool& Pool = ObjectPools.Add(LoadedActorClass);
+    Pool.InitialSize = InDataAsset->InitialSize;
+
+    if (bWarmup)
+    {
+        Warmup(LoadedActorClass);
+    }
+
+    return true;
+}
+
+bool UObjectPoolSubsystem::UnregisterPoolDataAsset(const UObjectPoolDataAsset* InDataAsset)
+{
+    if (!InDataAsset || InDataAsset->ActorClass.IsNull())
+    {
+        return false;
+    }
+
+    TSubclassOf<AActor> LoadedActorClass = InDataAsset->ActorClass.LoadSynchronous();
+
+    ClearPool(LoadedActorClass);
+
+    return true;
+}
+
+void UObjectPoolSubsystem::Warmup(TSubclassOf<AActor> InClass)
+{
+    FObjectPool* Pool = ObjectPools.Find(InClass);
+
+    if (!Pool)
+    {
+        return;
+    }
+
+    FTransform InitialTransform(FVector::DownVector * 10000.0f);
+    TArray<TWeakObjectPtr<AActor>> SpawnedArray;
+    SpawnedArray.Reserve(Pool->InitialSize);
+
+    for (int i = 0; i < Pool->InitialSize; i++)
+    {
+        SpawnedArray.Add(Spawn(InClass, InitialTransform));
+    }
+
+    for (TWeakObjectPtr<AActor> Spawned : SpawnedArray)
+    {
+        ReturnPool(Spawned.Get());
+    }
+}
+
+void UObjectPoolSubsystem::WarmupAll()
+{
+    for (auto& [Key, _] : ObjectPools)
+    {
+        Warmup(Key);
+    }
+}
+
+void UObjectPoolSubsystem::ClearPool(TSubclassOf<AActor> InClass)
+{
+    FObjectPool* Pool = ObjectPools.Find(InClass);
+
+    if (!Pool)
+    {
+        return;
+    }
+
+    for (AActor* Actor : Pool->ReadyActors)
+    {
+        if (IsValid(Actor))
+        {
+            Actor->Destroy();
+        }
+    }
+    Pool->ReadyActors.Empty();
+
+    for (AActor* Actor : Pool->ActiveActors)
+    {
+        if (IsValid(Actor))
+        {
+            Actor->Destroy();
+        }
+    }
+    Pool->ActiveActors.Empty();
+
+    ObjectPools.Remove(InClass);
+}
+
+void UObjectPoolSubsystem::ClearAllPools()
+{
+    for (auto& [Key, _] : ObjectPools)
+    {
+        ClearPool(Key);
+    }
+
+    ObjectPools.Empty();
+}
+
+AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InClassType, const FTransform& InTransform)
+{
+    if (!InClassType)
     {
         return nullptr;
     }
 
-    FObjectPool& ObjectPool = GenericPoolMap[InActorClass];
+    FObjectPool* Pool = ObjectPools.Find(InClassType);
 
-    if (ObjectPool.ReadyActors.Num() > 0)
+    if (!Pool)
     {
-        Spawned = ObjectPool.ReadyActors.Pop();
+        return nullptr;
+    }
+
+    AActor* Spawned = nullptr;
+
+    if (Pool->ReadyActors.Num() > 0)
+    {
+        Spawned = Pool->ReadyActors.Pop();
         Spawned->SetActorTransform(InTransform);
-        UE_LOG(LogTemp, Display, TEXT("Spawn() : Reuse %s"), *Spawned->GetName());
+
+        UE_LOG(LogTemp, Log, TEXT("Spawn(Reuse) : %s"), *Spawned->GetName());
     }
     else
     {
-        if (ObjectPool.ObjectClass && GetWorld())
+        if (GetWorld())
         {
             FActorSpawnParameters SpawnParam;
             SpawnParam.Owner = nullptr;
             SpawnParam.ObjectFlags = RF_Transient;
 
-            Spawned = GetWorld()->SpawnActor<AActor>(ObjectPool.ObjectClass, InTransform, SpawnParam);
+            Spawned = GetWorld()->SpawnActor<AActor>(InClassType, InTransform, SpawnParam);
 #if WITH_EDITOR
             if (Spawned)
             {
                 Spawned->SetFolderPath(FName("Pool"));
-                UE_LOG(LogTemp, Display, TEXT("Spawn() : Create %s"), *Spawned->GetName());
+
+                UE_LOG(LogTemp, Log, TEXT("Spawn(New) : %s"), *Spawned->GetName());
             }
 #endif
         }
@@ -160,8 +199,14 @@ AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InActorClass, const FTra
         {
             IPoolableInterface::Execute_OnSpawn(Spawned);
         }
+        else
+        {
+            Spawned->SetActorHiddenInGame(false);
+            Spawned->SetActorTickEnabled(true);
+            Spawned->SetActorEnableCollision(true);
+        }
 
-        ObjectPool.ActiveActors.Add(Spawned);
+        Pool->ActiveActors.Add(Spawned);
     }
 
     return Spawned;
@@ -169,13 +214,15 @@ AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InActorClass, const FTra
 
 void UObjectPoolSubsystem::ReturnPool(AActor* InActor)
 {
-    //UE_LOG(LogTemp, Display, TEXT("ObjectPoolSubsystem.ReturnPool()"));
     if (!InActor)
     {
         return;
     }
 
-    if (!ActiveActors.Contains(InActor))
+    TSubclassOf<AActor> ActorClassType = InActor->GetClass();
+    FObjectPool* Pool = ObjectPools.Find(ActorClassType);
+
+    if (!Pool || !Pool->ActiveActors.Contains(InActor))
     {
         return;
     }
@@ -184,38 +231,15 @@ void UObjectPoolSubsystem::ReturnPool(AActor* InActor)
     {
         IPoolableInterface::Execute_OnReturn(InActor);
     }
-
-    ActiveActors.Remove(InActor);
-    ReadyActors.Add(InActor);
-    UE_LOG(LogTemp, Display, TEXT("ObjectPoolSubsystem.ReturnPool() - 되돌리기"));
-}
-
-void UObjectPoolSubsystem::ReturnPool(TSubclassOf<AActor> InActorClass, AActor* InActor)
-{
-    if (!InActor)
+    else
     {
-        return;
+        InActor->SetActorHiddenInGame(true);
+        InActor->SetActorTickEnabled(false);
+        InActor->SetActorEnableCollision(false);
     }
 
-    if (!GenericPoolMap.Contains(InActorClass))
-    {
-        return;
-    }
+    Pool->ActiveActors.Remove(InActor);
+    Pool->ReadyActors.Add(InActor);
 
-    FObjectPool& ObjectPool = GenericPoolMap[InActorClass];
-
-    if (!ObjectPool.ActiveActors.Contains(InActor))
-    {
-        return;
-    }
-
-    if (InActor->GetClass()->ImplementsInterface(UPoolableInterface::StaticClass()))
-    {
-        IPoolableInterface::Execute_OnReturn(InActor);
-    }
-
-    ObjectPool.ActiveActors.Remove(InActor);
-    ObjectPool.ReadyActors.Add(InActor);
-
-    UE_LOG(LogTemp, Display, TEXT("ReturnPool() : %s"), *InActor->GetName());
+    UE_LOG(LogTemp, Log, TEXT("ReturnPool() : %s"), *InActor->GetName());
 }

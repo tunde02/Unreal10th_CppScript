@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "Data/ObjectPoolDataAsset.h"
 #include "ObjectPoolSettings.generated.h"
 
 // Config = Game : 설정창의 Game 카테고리에 저장하겠다(Config/Defaultgame.ini)
@@ -14,10 +15,12 @@ class UNREAL10TH_CPPSCRIPT_API UObjectPoolSettings : public UDeveloperSettings
     GENERATED_BODY()
 
 public:
-    // Config : 이 프로퍼티는 ini 파일에 저장되고 불러와질 수 있다
+    /*
     UPROPERTY(Config, EditAnywhere, Category = "PoolType")
     TSoftClassPtr<AActor> DamagePopupClass = nullptr;
+    */
 
+    // Config : 이 프로퍼티는 ini 파일에 저장되고 불러와질 수 있다
     UPROPERTY(Config, EditAnywhere, Category = "PoolType")
-    TArray<TSoftClassPtr<AActor>> PoolableClasses;
+    TArray<TSoftObjectPtr<UObjectPoolDataAsset>> PoolableDataAssets; // PoolableClasses
 };

@@ -8,6 +8,8 @@
 
 class UStaticMeshComponent;
 class USceneComponent;
+class ADamagePopupActor;
+class ATestVfxPlayer;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API ADummyEnemyActor : public AActor
@@ -31,9 +33,9 @@ protected:
     TObjectPtr<USceneComponent> PopupTransform = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hello")
-    TSubclassOf<AActor> DamagePopupClass = nullptr;
+    TSubclassOf<ADamagePopupActor> DamagePopupClass = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hello")
-    TSubclassOf<AActor> TextVfxPlayerClass = nullptr;
+    TSubclassOf<ATestVfxPlayer> TextVfxPlayerClass = nullptr;
 
 };
