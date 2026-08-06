@@ -76,4 +76,5 @@ private:
     TWeakObjectPtr<ACharacter> OwnerCharacter = nullptr; // 이 컴포넌트가 부착된 캐릭터
 
     TWeakObjectPtr<UAnimInstance> OwnerAnimInstance = nullptr; // OwnerCharacter의 AnimInstance
+
 };

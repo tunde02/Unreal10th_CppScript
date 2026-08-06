@@ -63,5 +63,6 @@ protected:
 private:
     bool bIdle = true;
     float ElapsedTime = 0.0f;
+    FVector MeshZOffset = FVector(0.0f, 0.0f, -10.f);
 
 };

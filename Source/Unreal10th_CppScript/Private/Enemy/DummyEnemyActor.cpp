@@ -4,7 +4,6 @@
 #include "Enemy/DummyEnemyActor.h"
 #include "Enemy/DamagePopupActor.h"
 #include "Test/TestVfxPlayer.h"
-
 #include "Framework/Subsystem/ObjectPoolSubsystem.h"
 
 // Sets default values

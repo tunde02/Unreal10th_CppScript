@@ -13,6 +13,20 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 
+void APickupWeapon::SetWeaponData(UWeaponDataAsset* InData)
+{
+    WeaponData = InData;
+
+    if (WeaponData)
+    {
+        if (USkeletalMesh* SkeletalMeshData = WeaponData->Mesh.LoadSynchronous())
+        {
+            Mesh->SetSkeletalMesh(SkeletalMeshData);
+            Mesh->SetRelativeLocation(MeshBaseLocation + WeaponData->LocationOffset);
+        }
+    }
+}
+
 void APickupWeapon::BeginPlay()
 {
     Super::BeginPlay();
@@ -108,10 +122,6 @@ void APickupWeapon::OnFinishPickupEffect()
         if (IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(TargetActor.Get()))
         {
             IWeaponUserInterface::Execute_EquipWeapon(TargetActor.Get(), WeaponData);
-            //if (UWeaponComponent* WeaponComp = WeaponUser->GetWeaponComponent())
-            //{
-            //    WeaponComp->EquipWeapon(WeaponData);
-            //}
         }
     }
 

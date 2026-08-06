@@ -27,6 +27,8 @@ void APickupBase::BeginPlay()
     Super::BeginPlay();
 
     ElapsedTime = 0.0f;
+
+    NiagaraComponent->SetRelativeLocation(MeshZOffset);
 }
 
 void APickupBase::Tick(float DeltaTime)
@@ -65,7 +67,7 @@ void APickupBase::OnUpdateUpDownSpin(float InDeltaTime)
 
     float Duration = FMath::Max(UpDownDuration, 0.001f);
     float Progress = FMath::Fmod(ElapsedTime / Duration, 1.0f);
-    FVector NewMeshLocation = MeshBaseLocation;
+    FVector NewMeshLocation = MeshBaseLocation + MeshZOffset;
     NewMeshLocation.Z += UpDownCurve->GetFloatValue(Progress) * UpDownHeight;
 
     Mesh->SetRelativeLocation(NewMeshLocation);

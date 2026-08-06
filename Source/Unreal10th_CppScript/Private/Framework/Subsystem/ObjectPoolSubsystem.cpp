@@ -145,12 +145,29 @@ void UObjectPoolSubsystem::ClearPool(TSubclassOf<AActor> InClass)
 
 void UObjectPoolSubsystem::ClearAllPools()
 {
-    //for (auto& [Key, _] : ObjectPools)
-    //{
-    //    ClearPool(Key);
-    //}
+    for (auto& [Key, Pool] : ObjectPools)
+    {
+        for (AActor* Actor : Pool.ReadyActors)
+        {
+            if (IsValid(Actor))
+            {
+                Actor->Destroy();
+            }
+        }
+        Pool.ReadyActors.Empty();
 
-    //ObjectPools.Empty();
+        //for (AActor* Actor : Pool.ActiveActors)
+        for (auto& [_, Actor] : Pool.ActiveActors)
+        {
+            if (IsValid(Actor))
+            {
+                Actor->Destroy();
+            }
+        }
+        Pool.ActiveActors.Empty();
+    }
+
+    ObjectPools.Empty();
 }
 
 AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InClassType, const FTransform& InTransform)

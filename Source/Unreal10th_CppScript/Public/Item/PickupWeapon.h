@@ -15,6 +15,10 @@ class UNREAL10TH_CPPSCRIPT_API APickupWeapon : public APickupBase
 {
     GENERATED_BODY()
 
+public:
+    UFUNCTION(BlueprintCallable)
+    void SetWeaponData(UWeaponDataAsset* InData);
+
 protected:
     virtual void BeginPlay() override;
     virtual void OnConstruction(const FTransform& Transform) override;
