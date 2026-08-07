@@ -39,8 +39,6 @@ protected:
 
 private:
     void HandleOnDie(UAnimMontage* InMontage, bool bInterrupted);
-    void HandlePickupItemBounce(AActor* InActor) const;
-    void SpawnPickup(UItemDataAsset* ItemDataAsset);
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

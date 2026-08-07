@@ -12,10 +12,10 @@ class UNREAL10TH_CPPSCRIPT_API UMiscItemDataAsset : public UItemDataAsset
     GENERATED_BODY()
 
 public:
-    virtual bool IsLoaded() const;
+    virtual bool IsLoaded() const override;
 
 protected:
-    virtual void OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const;
+    virtual void OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const override;
 
 public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Misc|Appearance")

@@ -7,8 +7,9 @@
 #include "Interface/HealthInterface.h"
 #include "CommonHeader/ItemDropTable.h"
 #include "Item/PickupBase.h"
-#include "Framework/Subsystem/ObjectPoolSubsystem.h"
 #include "Enemy/DamagePopupActor.h"
+#include "Framework/Subsystem/ObjectPoolSubsystem.h"
+#include "Framework/Subsystem/PickupFactorySubsystem.h"
 
 #include "Components/CapsuleComponent.h"
 
@@ -112,21 +113,11 @@ void AEnemyCharacter::DropItems()
             continue;
         }
 
-        UItemDataAsset* PickupData = Row->PickupData;
-        if (!PickupData->IsLoaded())
+        if (UGameInstance* GameInstance = GetGameInstance())
         {
-            PickupData->RequestDataLoad(
-                FStreamableDelegate::CreateWeakLambda(
-                    this,
-                    [this, PickupData]() {
-                        SpawnPickup(PickupData);
-                    }
-                )
-            );
-        }
-        else
-        {
-            SpawnPickup(PickupData);
+            UItemDataAsset* PickupData = Row->PickupData;
+            UPickupFactorySubsystem* Subsystem = GameInstance->GetSubsystem<UPickupFactorySubsystem>();
+            Subsystem->SpawnPickup(PickupData, GetActorTransform());
         }
     }
 }
@@ -136,69 +127,4 @@ void AEnemyCharacter::HandleOnDie(UAnimMontage* InMontage, bool bInterrupted)
     DropItems();
 
     Destroy();
-}
-
-void AEnemyCharacter::HandlePickupItemBounce(AActor* InActor) const
-{
-    UPrimitiveComponent* PhysComp = Cast<UPrimitiveComponent>(InActor->GetRootComponent());
-
-    if (!PhysComp)
-    {
-        PhysComp = InActor->FindComponentByClass<UPrimitiveComponent>();
-    }
-
-    if (!PhysComp)
-    {
-        return;
-    }
-
-    PhysComp->SetSimulatePhysics(true);
-
-    FVector RandomDir = FVector(
-        FMath::FRandRange(-1.0f, 1.0f),
-        FMath::FRandRange(-1.0f, 1.0f),
-        FMath::FRandRange(1.0f, 1.0f) // 위로 튀도록
-    ).GetSafeNormal();
-
-    float ImpulseStrength = 400.0f;
-    PhysComp->AddImpulse(RandomDir * ImpulseStrength, NAME_None, true);
-
-    // 일정 시간 후 물리를 끄는 람다(Lambda) 타이머 설정
-    float PhysicsDuration = 3.0f;
-    FTimerHandle TimerHandle;
-
-    // TWeakObjectPtr를 써서 타이머 동작 중에 액터가 파괴되어 발생하는 널 참조 예방
-    TWeakObjectPtr<UPrimitiveComponent> WeakPhysComp = PhysComp;
-
-    GetWorld()->GetTimerManager().SetTimer(
-        TimerHandle,
-        [WeakPhysComp]() {
-            if (WeakPhysComp.IsValid())
-            {
-                WeakPhysComp->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
-                WeakPhysComp->SetAllPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
-                WeakPhysComp->SetSimulatePhysics(false);
-            }
-        },
-        PhysicsDuration,
-        false
-    );
-}
-
-void AEnemyCharacter::SpawnPickup(UItemDataAsset* ItemDataAsset)
-{
-    APickupBase* PickupActor = GetWorld()->SpawnActor<APickupBase>(
-        ItemDataAsset->PickupClass.Get(),
-        GetActorTransform()
-    );
-
-    if (!PickupActor)
-    {
-        return;
-    }
-
-    PickupActor->InitializePickup(ItemDataAsset);
-    HandlePickupItemBounce(PickupActor);
-
-    UE_LOG(LogTemp, Log, TEXT("%s가 드랍되었습니다."), *(ItemDataAsset->DisplayName).ToString());
 }

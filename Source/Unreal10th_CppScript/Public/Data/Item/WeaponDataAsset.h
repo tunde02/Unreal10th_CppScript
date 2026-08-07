@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Data/Item/ItemDataAsset.h"
-#include "Engine/DataAsset.h"
-#include "Engine/StreamableManager.h"
 #include "NiagaraSystem.h"
 #include "WeaponDataAsset.generated.h"
 
@@ -20,7 +18,7 @@ public:
     virtual bool IsLoaded() const override;
 
 protected:
-    virtual void OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const;
+    virtual void OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const override;
 
 public:
     // 무기 메시
