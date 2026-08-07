@@ -8,7 +8,7 @@
 #include "Interface/HealthInterface.h"
 #include "Component/StatComponent.h"
 #include "Component/WeaponComponent.h"
-#include "Data/WeaponDataAsset.h"
+#include "Data/Item/WeaponDataAsset.h"
 
 #include "Unreal10th_CppScript/Unreal10th_CppScript.h"
 #include "Components/CapsuleComponent.h"

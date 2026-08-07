@@ -47,6 +47,9 @@ public:
     virtual void DamageHealth_Implementation(float InAmount) override;
     virtual void HealHealth_Implementation(float InAmount) override;
 
+    UFUNCTION(BlueprintCallable, Category = "Health")
+    virtual bool IsAlive() const override;
+
 public:
     UPROPERTY(BlueprintAssignable, Category = "Stat|Stamina")
     FOnStatEmpty OnStaminaEmpty;
@@ -81,4 +84,6 @@ private:
 
     FTimerHandle StaminaAutoRecoveryTimerHandle;
     FAutoRecoveryData AutoRecoveryData;
+
+    bool bAlive = true;
 };

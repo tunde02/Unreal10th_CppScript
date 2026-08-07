@@ -7,7 +7,7 @@
 #include "Component/WeaponComponent.h"
 #include "Interface/StaminaInterface.h"
 #include "AnimNotify/AnimNotifyState_SectionJump.h"
-#include "Data/WeaponDataAsset.h"
+#include "Data/Item/WeaponDataAsset.h"
 #include "Weapon/WeaponActor.h"
 
 #include "EnhancedInputComponent.h"
