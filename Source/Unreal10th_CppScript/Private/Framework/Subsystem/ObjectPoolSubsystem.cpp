@@ -6,10 +6,6 @@
 #include "Interface/PoolableInterface.h"
 #include "Data/ObjectPoolDataAsset.h"
 
-#include "NiagaraSystem.h"
-#include "NiagaraFunctionLibrary.h"
-#include "Containers/Map.h"
-
 void UObjectPoolSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
@@ -32,7 +28,7 @@ void UObjectPoolSubsystem::Initialize(FSubsystemCollectionBase& Collection)
             Pool.MaxSize = LoadedDataAsset->MaxSize;
             Pool.MaxPolicy = LoadedDataAsset->MaxPolicy;
 
-            UE_LOG(LogTemp, Log, TEXT("%s 풀 추가"), *LoadedDataAsset->GetName());
+            //UE_LOG(LogTemp, Log, TEXT("%s 풀 추가"), *LoadedDataAsset->GetName());
         }
     }
 }
@@ -57,6 +53,8 @@ bool UObjectPoolSubsystem::RegisterPoolDataAsset(const UObjectPoolDataAsset* InD
 
     FObjectPool& Pool = ObjectPools.Add(LoadedActorClass);
     Pool.InitialSize = InDataAsset->InitialSize;
+    Pool.MaxSize = InDataAsset->MaxSize;
+    Pool.MaxPolicy = InDataAsset->MaxPolicy;
 
     if (bWarmup)
     {
@@ -90,17 +88,26 @@ void UObjectPoolSubsystem::Warmup(TSubclassOf<AActor> InClass)
     }
 
     FTransform InitialTransform(FVector::DownVector * 10000.0f);
-    TArray<TWeakObjectPtr<AActor>> SpawnedArray;
-    SpawnedArray.Reserve(Pool->InitialSize);
 
-    for (int i = 0; i < Pool->InitialSize; i++)
+    for (int _ = 0; _ < Pool->InitialSize; _++)
     {
-        SpawnedArray.Add(Spawn(InClass, InitialTransform));
-    }
+        AActor* Spawned = CreateNewObject(InClass, InitialTransform);
 
-    for (TWeakObjectPtr<AActor> Spawned : SpawnedArray)
-    {
-        ReturnPool(Spawned.Get());
+        if (Spawned)
+        {
+            if (Spawned->GetClass()->ImplementsInterface(UPoolableInterface::StaticClass()))
+            {
+                IPoolableInterface::Execute_OnSpawn(Spawned);
+            }
+            else
+            {
+                Spawned->SetActorHiddenInGame(true);
+                Spawned->SetActorTickEnabled(false);
+                Spawned->SetActorEnableCollision(false);
+            }
+
+            Pool->ReadyActors.Add(Spawned);
+        }
     }
 }
 
@@ -130,8 +137,7 @@ void UObjectPoolSubsystem::ClearPool(TSubclassOf<AActor> InClass)
     }
     Pool->ReadyActors.Empty();
 
-    //for (AActor* Actor : Pool->ActiveActors)
-    for (auto& [_, Actor] : Pool->ActiveActors)
+    for (AActor* Actor : Pool->ActiveActors)
     {
         if (IsValid(Actor))
         {
@@ -139,6 +145,8 @@ void UObjectPoolSubsystem::ClearPool(TSubclassOf<AActor> InClass)
         }
     }
     Pool->ActiveActors.Empty();
+    Pool->ActiveOrderList->Empty();
+    Pool->ActiveNodeMap->Empty();
 
     ObjectPools.Remove(InClass);
 }
@@ -156,8 +164,7 @@ void UObjectPoolSubsystem::ClearAllPools()
         }
         Pool.ReadyActors.Empty();
 
-        //for (AActor* Actor : Pool.ActiveActors)
-        for (auto& [_, Actor] : Pool.ActiveActors)
+        for (AActor* Actor : Pool.ActiveActors)
         {
             if (IsValid(Actor))
             {
@@ -165,6 +172,8 @@ void UObjectPoolSubsystem::ClearAllPools()
             }
         }
         Pool.ActiveActors.Empty();
+        Pool.ActiveOrderList->Empty();
+        Pool.ActiveNodeMap->Empty();
     }
 
     ObjectPools.Empty();
@@ -184,78 +193,48 @@ AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InClassType, const FTran
         return nullptr;
     }
 
-    AActor* Spawned = nullptr;
+    AActor* Spawned = GetReadyActor(Pool);
 
-    if (Pool->ReadyActors.Num() > 0)
+    if (Spawned)
     {
-        Spawned = Pool->ReadyActors.Pop();
         Spawned->SetActorTransform(InTransform);
 
         UE_LOG(LogTemp, Log, TEXT("Spawn(Reuse) : %s"), *Spawned->GetName());
     }
-    else if (Pool->IsFull())
-    {
-        switch (Pool->MaxPolicy)
-        {
-            case EObjectPoolPolicy::Grow:
-            {
-                if (GetWorld())
-                {
-                    FActorSpawnParameters SpawnParam;
-                    SpawnParam.Owner = nullptr;
-                    SpawnParam.ObjectFlags = RF_Transient;
-
-                    Spawned = GetWorld()->SpawnActor<AActor>(InClassType, InTransform, SpawnParam);
-#if WITH_EDITOR
-                    if (Spawned)
-                    {
-                        Spawned->SetFolderPath(FName("Pool"));
-
-                        UE_LOG(LogTemp, Log, TEXT("Pool Grow : %s"), *Spawned->GetName());
-                    }
-#endif
-                }
-
-                break;
-            }
-            case EObjectPoolPolicy::ReuseOldest:
-            {
-                double Key = Pool->ActivatedTimeSecondsQueue[0];
-
-                if (TObjectPtr<AActor>* Value = Pool->ActiveActors.Find(Key))
-                {
-                    ReturnPool(*Value);
-
-                    Spawned = Pool->ReadyActors.Pop();
-                    Spawned->SetActorTransform(InTransform);
-
-                    UE_LOG(LogTemp, Log, TEXT("Pool ReuseOldest : %s"), *Spawned->GetName());
-                }
-                break;
-            }
-            case EObjectPoolPolicy::DoNotSpawn:
-                UE_LOG(LogTemp, Log, TEXT("Pool DoNotSpawn : "));
-            default:
-                break;
-        }
-    }
     else
     {
-        if (GetWorld())
+        const bool bMax = Pool->IsFull();
+
+        if (!bMax)
         {
-            FActorSpawnParameters SpawnParam;
-            SpawnParam.Owner = nullptr;
-            SpawnParam.ObjectFlags = RF_Transient;
+            Spawned = CreateNewObject(InClassType, InTransform);
 
-            Spawned = GetWorld()->SpawnActor<AActor>(InClassType, InTransform, SpawnParam);
-#if WITH_EDITOR
-            if (Spawned)
+            UE_LOG(LogTemp, Log, TEXT("Spawn(New) : %s"), *Spawned->GetName());
+        }
+        else
+        {
+            switch (Pool->MaxPolicy)
             {
-                Spawned->SetFolderPath(FName("Pool"));
+                case EObjectPoolPolicy::DoNotSpawn:
+                    return nullptr;
+                case EObjectPoolPolicy::Grow:
+                    Spawned = CreateNewObject(InClassType, InTransform);
 
-                UE_LOG(LogTemp, Log, TEXT("Spawn(New) : %s"), *Spawned->GetName());
+                    UE_LOG(LogTemp, Log, TEXT("Spawn(Grow) : %s"), *Spawned->GetName());
+                    break;
+                case EObjectPoolPolicy::ReuseOldest:
+                    if (FOrderNode* Head = Pool->ActiveOrderList->GetHead())
+                    {
+                        AActor* OldestActor = Head->GetValue();
+                        ReturnPool(OldestActor);
+
+                        Spawned = GetReadyActor(Pool);
+                        Spawned->SetActorTransform(InTransform);
+
+                        UE_LOG(LogTemp, Log, TEXT("Spawn(ReuseOldest) : %s"), *Spawned->GetName());
+                    }
+                    break;
             }
-#endif
         }
     }
 
@@ -272,9 +251,10 @@ AActor* UObjectPoolSubsystem::Spawn(TSubclassOf<AActor> InClassType, const FTran
             Spawned->SetActorEnableCollision(true);
         }
 
-        double ActivatedTimeSeconds = FPlatformTime::Seconds();
-        Pool->ActiveActors.Add(ActivatedTimeSeconds, Spawned);
-        Pool->ActivatedTimeSecondsQueue.HeapPush(ActivatedTimeSeconds);
+        Pool->ActiveActors.Add(Spawned);
+        FOrderNode* NewNode = new FOrderNode(Spawned);
+        Pool->ActiveOrderList->AddTail(NewNode);
+        Pool->ActiveNodeMap->Add(Spawned, NewNode);
     }
 
     return Spawned;
@@ -290,8 +270,7 @@ void UObjectPoolSubsystem::ReturnPool(AActor* InActor)
     TSubclassOf<AActor> ActorClassType = InActor->GetClass();
     FObjectPool* Pool = ObjectPools.Find(ActorClassType);
 
-    //if (!Pool || !Pool->ActiveActors.Contains(InActor))
-    if (!Pool || !Pool->ActiveActors.FindKey(InActor))
+    if (!Pool || !Pool->ActiveActors.Contains(InActor))
     {
         return;
     }
@@ -305,15 +284,61 @@ void UObjectPoolSubsystem::ReturnPool(AActor* InActor)
         InActor->SetActorHiddenInGame(true);
         InActor->SetActorTickEnabled(false);
         InActor->SetActorEnableCollision(false);
-        InActor->DisableComponentsSimulatePhysics();
+        //InActor->DisableComponentsSimulatePhysics();
     }
 
-    //Pool->ActiveActors.Remove(InActor);
-    double Key = *(Pool->ActiveActors.FindKey(InActor));
-    Pool->ActiveActors.Remove(Key);
-    Pool->ActivatedTimeSecondsQueue.HeapPop(Key);
-
+    Pool->ActiveActors.Remove(InActor);
     Pool->ReadyActors.Add(InActor);
 
+    if (FOrderNode** FoundNode = Pool->ActiveNodeMap->Find(InActor))
+    {
+        Pool->ActiveOrderList->RemoveNode(*FoundNode, true);
+        Pool->ActiveNodeMap->Remove(InActor);
+    }
+
     UE_LOG(LogTemp, Log, TEXT("ReturnPool() : %s"), *InActor->GetName());
+}
+
+AActor* UObjectPoolSubsystem::CreateNewObject(TSubclassOf<AActor> InClassType, const FTransform& InTransform)
+{
+    if (!GetWorld())
+    {
+        return nullptr;
+    }
+
+    FActorSpawnParameters SpawnParam;
+    SpawnParam.Owner = nullptr;
+    SpawnParam.ObjectFlags = RF_Transient;
+
+    AActor* Spawned = GetWorld()->SpawnActor<AActor>(InClassType, InTransform, SpawnParam);
+
+#if WITH_EDITOR
+    if (Spawned)
+    {
+        Spawned->SetFolderPath(FName("Pool"));
+    }
+#endif
+
+    return Spawned;
+}
+
+AActor* UObjectPoolSubsystem::GetReadyActor(FObjectPool* InPool)
+{
+    if (!InPool)
+    {
+        return nullptr;
+    }
+
+    AActor* ReadyActor = nullptr;
+    while (InPool->ReadyActors.Num() > 0)
+    {
+        AActor* Candidate = InPool->ReadyActors.Pop();
+        if (IsValid(Candidate))
+        {
+            ReadyActor = Candidate;
+            break;
+        }
+    }
+
+    return ReadyActor;
 }

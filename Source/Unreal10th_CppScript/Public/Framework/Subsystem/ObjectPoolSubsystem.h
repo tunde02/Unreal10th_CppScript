@@ -10,10 +10,19 @@
 class UNiagaraSystem;
 class UObjectPoolDataAsset;
 
+using FOrderNode = TDoubleLinkedList<TObjectPtr<AActor>>::TDoubleLinkedListNode;
+
+
 USTRUCT()
 struct FObjectPool
 {
     GENERATED_BODY()
+
+    FObjectPool()
+        : ActiveOrderList(MakeShared<TDoubleLinkedList<TObjectPtr<AActor>>>()),
+        ActiveNodeMap(MakeShared<TMap<TObjectPtr<AActor>, FOrderNode*>>())
+    {
+    }
 
     // 사용 대기 중인 액터들
     UPROPERTY(Transient)
@@ -21,12 +30,13 @@ struct FObjectPool
 
     // 실제 사용 중인 액터들
     UPROPERTY(Transient)
-    TMap<double, TObjectPtr<AActor>> ActiveActors;
+    TSet<TObjectPtr<AActor>> ActiveActors;
 
-    // 액터들이 사용되기 시작한 시간을 저장한 우선순위 큐
-    UPROPERTY(Transient)
-    //TMap<double, TObjectPtr<AActor>> ActivatedTimeSecondsMap;
-    TArray<double> ActivatedTimeSecondsQueue;
+    // 사용 순서를 기록할 더블 링크드 리스트(Head가 가장 오래됨, Tail이 가장 새것) (주의:GC가 추적은 못함)
+    TSharedPtr<TDoubleLinkedList<TObjectPtr<AActor>>> ActiveOrderList;
+
+    // 액터 포인터를 키값으로 하고, ActiveOrderList의 노드 주소를 Value로 하는 맵
+    TSharedPtr<TMap<TObjectPtr<AActor>, FOrderNode*>> ActiveNodeMap;
 
     UPROPERTY(Transient)
     int32 InitialSize = 0;
@@ -37,7 +47,7 @@ struct FObjectPool
     UPROPERTY(Transient)
     EObjectPoolPolicy MaxPolicy = EObjectPoolPolicy::Grow;
 
-    int Size() const { return ReadyActors.Num() + ActiveActors.Num(); }
+    int32 Size() const { return ReadyActors.Num() + ActiveActors.Num(); }
     bool IsFull() const { return Size() >= MaxSize; }
 
 };
@@ -80,6 +90,10 @@ public:
     {
         return Cast<T>(Spawn(TSubclassOf<AActor>(InClassType), InTransform));
     }
+
+protected:
+    AActor* CreateNewObject(TSubclassOf<AActor> InClassType, const FTransform& InTransform);
+    AActor* GetReadyActor(FObjectPool* InPool);
 
 protected:
     UPROPERTY()
