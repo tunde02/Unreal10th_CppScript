@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/Item/ItemDataAsset.h"
 #include "Engine/DataAsset.h"
 #include "Engine/StreamableManager.h"
 #include "NiagaraSystem.h"
@@ -11,13 +12,15 @@
 class USkeletalMesh;
 
 UCLASS(BlueprintType)
-class UNREAL10TH_CPPSCRIPT_API UWeaponDataAsset : public UPrimaryDataAsset
+class UNREAL10TH_CPPSCRIPT_API UWeaponDataAsset : public UItemDataAsset
 {
     GENERATED_BODY()
 
 public:
-    TSharedPtr<FStreamableHandle> RequestDataLoad(FStreamableDelegate InDelegate);
-    bool IsLoaded() const;
+    virtual bool IsLoaded() const override;
+
+protected:
+    virtual void OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const;
 
 public:
     // 무기 메시

@@ -9,8 +9,9 @@
 
 class UStatComponent;
 class UAnimMontage;
-class APickupWeapon;
+class APickupBase;
 class ADamagePopupActor;
+class UItemDataAsset;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AEnemyCharacter : public ACharacter, public IStatInterface
@@ -39,6 +40,7 @@ protected:
 private:
     void HandleOnDie(UAnimMontage* InMontage, bool bInterrupted);
     void HandlePickupItemBounce(AActor* InActor) const;
+    void SpawnPickup(UItemDataAsset* ItemDataAsset);
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -50,10 +52,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
     TObjectPtr<UAnimMontage> DieMontage = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage Popup Class")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Damage Popup Class")
     TSubclassOf<ADamagePopupActor> DamagePopupClass;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Pickup Weapon Class")
-    TSubclassOf<APickupWeapon> PickupWeaponClass;
 
 };

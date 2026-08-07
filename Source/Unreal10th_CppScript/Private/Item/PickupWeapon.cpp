@@ -6,23 +6,32 @@
 #include "Weapon/WeaponActor.h"
 #include "Interface/WeaponUserInterface.h"
 #include "Component/WeaponComponent.h"
-#include "Data/WeaponDataAsset.h"
+#include "Data/Item/WeaponDataAsset.h"
 
 #include "Components/SphereComponent.h"
 #include "Curves/CurveFloat.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 
-void APickupWeapon::SetWeaponData(UWeaponDataAsset* InData)
+APickupWeapon::APickupWeapon()
 {
-    WeaponData = InData;
+    Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
+    Mesh->SetupAttachment(RootComponent);
+    Mesh->SetCollisionProfileName("NoCollision");
+}
 
-    if (WeaponData)
+void APickupWeapon::InitializePickup(UItemDataAsset* InData)
+{
+    Super::InitializePickup(InData);
+
+    if (DataAsset)
     {
+        WeaponData = Cast<UWeaponDataAsset>(DataAsset);
+
         if (USkeletalMesh* SkeletalMeshData = WeaponData->Mesh.LoadSynchronous())
         {
             Mesh->SetSkeletalMesh(SkeletalMeshData);
-            Mesh->SetRelativeLocation(MeshBaseLocation + WeaponData->LocationOffset);
+            Mesh->SetRelativeLocation(MeshBaseLocation + WeaponData->SpawnLocationOffset);
         }
     }
 }
@@ -41,14 +50,7 @@ void APickupWeapon::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
 
-    if (WeaponData)
-    {
-        if (USkeletalMesh* SkeletalMeshData = WeaponData->Mesh.LoadSynchronous())
-        {
-            Mesh->SetSkeletalMesh(SkeletalMeshData);
-            Mesh->SetRelativeLocation(MeshBaseLocation + WeaponData->LocationOffset);
-        }
-    }
+    InitializePickup(DataAsset);
 }
 
 void APickupWeapon::OnPickup(AActor* InTarget)
@@ -111,7 +113,7 @@ void APickupWeapon::OnUpdatePickupEffect()
 
 void APickupWeapon::OnFinishPickupEffect()
 {
-    if (TargetActor.IsValid())
+    if (TargetActor.IsValid() && WeaponData.IsValid())
     {
         UNiagaraComponent* NiagaraComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
             GetWorld(),
@@ -121,12 +123,17 @@ void APickupWeapon::OnFinishPickupEffect()
 
         if (IWeaponUserInterface* WeaponUser = Cast<IWeaponUserInterface>(TargetActor.Get()))
         {
-            IWeaponUserInterface::Execute_EquipWeapon(TargetActor.Get(), WeaponData);
+            IWeaponUserInterface::Execute_EquipWeapon(TargetActor.Get(), WeaponData.Get());
         }
     }
 
     GetWorldTimerManager().ClearTimer(PickupEffectTimerHandle);
     Destroy();
+}
+
+UMeshComponent* APickupWeapon::GetMesh() const
+{
+    return Mesh;
 }
 
 bool APickupWeapon::IsPickupEffectAssetReady() const

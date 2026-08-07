@@ -9,6 +9,7 @@
 class USphereComponent;
 class USkeletalMeshComponent;
 class UNiagaraComponent;
+class UItemDataAsset;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API APickupBase : public AActor
@@ -18,6 +19,8 @@ class UNREAL10TH_CPPSCRIPT_API APickupBase : public AActor
 public:
     APickupBase();
 
+    virtual void InitializePickup(UItemDataAsset* InData);
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
@@ -25,6 +28,7 @@ protected:
 
     virtual void OnPickup(AActor* InTarget);
     virtual void OnUpdateUpDownSpin(float InDeltaTime);
+    virtual UMeshComponent* GetMesh() const;
 
 private:
     bool IsCurveAssetReady() const;
@@ -34,15 +38,16 @@ protected:
     TObjectPtr<USphereComponent> SphereCollision = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<UNiagaraComponent> NiagaraComponent = nullptr;
 
 protected:
     // 메시의 기본 위치
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Data")
-    FVector MeshBaseLocation = FVector(0, 0, 50.0f);
+    FVector MeshBaseLocation = FVector(0.0f, 0.0f, 0.0f);
+
+    // 픽업 시 획득할 데이터 에셋
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Data")
+    TObjectPtr<UItemDataAsset> DataAsset;
 
     // 맵에 있을 때 위아래로 왕복하는 모습용 커브
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Default")

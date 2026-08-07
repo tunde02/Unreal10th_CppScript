@@ -16,8 +16,9 @@ class UNREAL10TH_CPPSCRIPT_API APickupWeapon : public APickupBase
     GENERATED_BODY()
 
 public:
-    UFUNCTION(BlueprintCallable)
-    void SetWeaponData(UWeaponDataAsset* InData);
+    APickupWeapon();
+
+    virtual void InitializePickup(UItemDataAsset* InData) override;
 
 protected:
     virtual void BeginPlay() override;
@@ -26,14 +27,12 @@ protected:
     virtual void OnPickup(AActor* InTarget) override;
     virtual void OnUpdatePickupEffect();
     virtual void OnFinishPickupEffect();
+    virtual UMeshComponent* GetMesh() const override;
 
 private:
     bool IsPickupEffectAssetReady() const;
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Data")
-    TObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
-
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
     TObjectPtr<UCurveFloat> PickupAlpha;
 
@@ -52,6 +51,10 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect|Pickup")
     TObjectPtr<UNiagaraSystem> PickupVfx = nullptr;
 
+protected:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
+
 private:
     // 아이템을 줍는 연출용 타이머의 실행 간격
     const float TimerInterval = 0.02f;
@@ -60,5 +63,7 @@ private:
     TWeakObjectPtr<AActor> TargetActor = nullptr;
     float PickupElapsedTime = 0.0f;
     FVector PickupStartLocation;
+
+    TWeakObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
 
 };

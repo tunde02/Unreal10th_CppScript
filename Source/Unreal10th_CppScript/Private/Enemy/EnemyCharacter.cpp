@@ -6,7 +6,7 @@
 #include "Unreal10th_CppScript/Unreal10th_CppScript.h"
 #include "Interface/HealthInterface.h"
 #include "CommonHeader/ItemDropTable.h"
-#include "Item/PickupWeapon.h"
+#include "Item/PickupBase.h"
 #include "Framework/Subsystem/ObjectPoolSubsystem.h"
 #include "Enemy/DamagePopupActor.h"
 
@@ -78,33 +78,55 @@ void AEnemyCharacter::OnDie()
 
 void AEnemyCharacter::DropItems()
 {
-    for (const auto& [RowName, Value] : ItemDropTable->GetRowMap())
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    if (!ItemDropTable)
+    {
+        return;
+    }
+
+    /* GetAllRows()를 사용하는 방식
+    TArray<FItemDropTableRow*> AllRows;
+    ItemDropTable->GetAllRows(TEXT("AEnemyCharacter::DropItems"), AllRows);
+    for (FItemDropTableRow* Row : AllRows) {}
+    */
+
+    TMap<FName, uint8*> Map = ItemDropTable->GetRowMap();
+    for (const auto& [RowName, Value] : Map)
     {
         FItemDropTableRow* Row = reinterpret_cast<FItemDropTableRow*>(Value);
 
-        if (!Row)
+        // 필수 데이터 확인
+        if (!Row || !Row->PickupData || !Row->PickupData->PickupClass)
         {
             continue;
         }
 
-        float RandomFloat = FMath::RandRange(0.0f, 1.0f);
-
-        if (RandomFloat <= Row->DropRate)
+        // 확률 체크
+        float RandomFloat = FMath::FRand();
+        if (RandomFloat > Row->DropRate)
         {
-            APickupWeapon* SpawnedPickupWeapon = GetWorld()->SpawnActor<APickupWeapon>(
-                PickupWeaponClass,
-                this->GetActorTransform()
+            continue;
+        }
+
+        UItemDataAsset* PickupData = Row->PickupData;
+        if (!PickupData->IsLoaded())
+        {
+            PickupData->RequestDataLoad(
+                FStreamableDelegate::CreateWeakLambda(
+                    this,
+                    [this, PickupData]() {
+                        SpawnPickup(PickupData);
+                    }
+                )
             );
-
-            if (!SpawnedPickupWeapon)
-            {
-                continue;
-            }
-
-            SpawnedPickupWeapon->SetWeaponData(Row->DropItemClass);
-            HandlePickupItemBounce(SpawnedPickupWeapon);
-
-            UE_LOG(LogTemp, Log, TEXT("%s 드랍 (DropRate=%.2f, RandomFloat=%.2f)"), *RowName.ToString(), Row->DropRate, RandomFloat);
+        }
+        else
+        {
+            SpawnPickup(PickupData);
         }
     }
 }
@@ -163,3 +185,20 @@ void AEnemyCharacter::HandlePickupItemBounce(AActor* InActor) const
     );
 }
 
+void AEnemyCharacter::SpawnPickup(UItemDataAsset* ItemDataAsset)
+{
+    APickupBase* PickupActor = GetWorld()->SpawnActor<APickupBase>(
+        ItemDataAsset->PickupClass.Get(),
+        GetActorTransform()
+    );
+
+    if (!PickupActor)
+    {
+        return;
+    }
+
+    PickupActor->InitializePickup(ItemDataAsset);
+    HandlePickupItemBounce(PickupActor);
+
+    UE_LOG(LogTemp, Log, TEXT("%s가 드랍되었습니다."), *(ItemDataAsset->DisplayName).ToString());
+}
