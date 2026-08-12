@@ -3,6 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Maze/CellData.h"
+
+UENUM(BlueprintType)
+enum class EMazeAlgorithmType : uint8
+{
+    Wilson,
+    Eller
+};
 
 struct FCellData;
 
@@ -11,12 +19,15 @@ class UNREAL10TH_CPPSCRIPT_API FMazeData
 public:
     ~FMazeData(); // FMazeData가 상속이 된다면 반드시 가상 소멸자를 사용해야 한다
 
-    void MakeMaze(uint8 InWidth, uint8 InHeight, int32 InSeed = RandomSeed);
+    void MakeMaze(uint8 InWidth, uint8 InHeight, int32 InSeed = RandomSeed, EMazeAlgorithmType InMazeAlgorithmType = EMazeAlgorithmType::Wilson);
     void ClearMaze();
 
     FCellData* GetCell(uint8 InX, uint8 InY);
 
 private:
+    void ExecuteEllerAlgorithm();
+    TArray<FEllerCellData*> ExecuteEllerAlgorithmSingleRow(TArray<FEllerCellData*>& InCellRow, int InRowNum);
+
     void ExecuteWilsonAlgorithm();
 
     // From셀과 To셀 사이의 문을 제거하는 함수
@@ -25,16 +36,40 @@ private:
     // InCell 주변의 셀 중 랜덤하게 하나 리턴하는 함수
     FCellData* GetRandomNeighborCell(const FCellData& InCell);
 
-    void ShuffleArray(TArray<FCellData*>& InOutArray);
+    template<typename T>
+    void ShuffleArray(TArray<T*>& InOutArray)
+    {
+        for (int i = InOutArray.Num() - 1; i > 0; i--)
+        {
+            int32 Index = RandomStream.RandRange(0, i);
+            InOutArray.Swap(i, Index);
+        }
+    }
+
+    // 작업용 셀 배열의 생성 결과를 FMazeData의 연속 메모리 Cells 배열로 복사하는 헬퍼 함수
+    template<typename TCellType>
+    void CopyToCells(const TArray<TCellType>& InSrcCells)
+    {
+        int32 Count = FMath::Min(Cells.Num(), InSrcCells.Num());
+        for (int32 i = 0; i < Count; i++)
+        {
+            Cells[i].X = InSrcCells[i].X;
+            Cells[i].Y = InSrcCells[i].Y;
+            Cells[i].Path = InSrcCells[i].Path;
+        }
+    }
 
     // 위치를 인덱스로 변경하는 함수
     inline uint16 LocationToIndex(uint8 InX, uint8 InY) const { return InX + InY * Width; }
 
     inline bool IsValidLocation(uint8 InX, uint8 InY) const { return InX < Width && InY < Height; }
 
-private:
+    TArray<int> SelectRandomNumbers(int InFrom, int InTo, int InCount);
+
+public:
     static constexpr int32 RandomSeed = -1;
 
+private:
     uint8 Width = 0;
     uint8 Height = 0;
 

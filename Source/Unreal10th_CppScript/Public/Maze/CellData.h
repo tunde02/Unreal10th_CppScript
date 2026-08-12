@@ -25,12 +25,6 @@ public:
     // 이 셀의 문이 열려 있는 방향
     EDirectionType Path = EDirectionType::None;
 
-    // 미로 생성 과정에서 이 셀이 미로에 포함되어 있는지 여부
-    bool bInMaze = false;
-
-    // 미로 생성 과정에서 다음 셀을 기록하기 위한 변수
-    FCellData* NextCell = nullptr;
-
     // 셀의 좌표를 가져오는 함수
     inline FIntPoint GetLocation() const { return FIntPoint(X, Y); }
 
@@ -42,5 +36,25 @@ public:
     //inline bool IsPath(EDirectionType InCheck) const { return EnumHasAnyFlags(Path, InCheck); }
 
     // 특정 방향이 벽인지 확인하는 함수
-    inline bool IsWall(EDirectionType InCheck) { return !IsPath(InCheck); }
+    inline bool IsWall(EDirectionType InCheck) const { return !IsPath(InCheck); }
+
+};
+
+struct UNREAL10TH_CPPSCRIPT_API FWilsonCellData : public FCellData
+{
+public:
+    // 미로 생성 과정에서 이 셀이 미로에 포함되어 있는지 여부
+    bool bInMaze = false;
+
+    // 미로 생성 과정에서 다음 셀을 기록하기 위한 변수
+    FWilsonCellData* NextCell = nullptr;
+
+};
+
+struct UNREAL10TH_CPPSCRIPT_API FEllerCellData : public FCellData
+{
+public:
+    // Eller's 알고리즘에서 이 셀이 속한 집합
+    int32 SetID = 0;
+
 };

@@ -18,6 +18,8 @@ public:
     // CellData 기반으로 경로 설정하고 문열기
     void InitializeCell(FCellData* InCellData);
 
+    float GetCellHalfSize() const { return CellHalfSize; }
+
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
