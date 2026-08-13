@@ -22,14 +22,17 @@ protected:
     virtual void OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const;
 
 public:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")
     FText DisplayName;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")
     FText Description;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")
     int32 Price = 1;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")
+    int32 MaxStackCount = 1;
 
     // 스폰할 클래스
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base|Spawn")

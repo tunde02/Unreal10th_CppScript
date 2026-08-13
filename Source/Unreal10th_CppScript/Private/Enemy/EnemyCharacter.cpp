@@ -113,11 +113,19 @@ void AEnemyCharacter::DropItems()
             continue;
         }
 
-        if (UGameInstance* GameInstance = GetGameInstance())
+        UPickupFactorySubsystem* PickupFactory = GetWorld()->GetSubsystem<UPickupFactorySubsystem>();
+        if (PickupFactory)
         {
-            UItemDataAsset* PickupData = Row->PickupData;
-            UPickupFactorySubsystem* Subsystem = GameInstance->GetSubsystem<UPickupFactorySubsystem>();
-            Subsystem->SpawnPickup(PickupData, GetActorTransform());
+            PickupFactory->SpawnPickupAsync(
+                Row->PickupData,
+                GetActorTransform(),
+                FOnPickupSpawned::CreateWeakLambda(
+                    this,
+                    [](APickupBase* InSpawned) {
+                        UE_LOG(LogTemp, Log, TEXT("%s가 스폰되었습니다."), *InSpawned->GetName());
+                    }
+                )
+            );
         }
     }
 }

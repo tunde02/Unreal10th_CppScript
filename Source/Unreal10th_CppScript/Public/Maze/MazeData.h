@@ -26,8 +26,6 @@ public:
 
 private:
     void ExecuteEllerAlgorithm();
-    TArray<FEllerCellData*> ExecuteEllerAlgorithmSingleRow(TArray<FEllerCellData*>& InCellRow, int InRowNum);
-
     void ExecuteWilsonAlgorithm();
 
     // From셀과 To셀 사이의 문을 제거하는 함수
@@ -70,8 +68,11 @@ public:
     static constexpr int32 RandomSeed = -1;
 
 private:
-    uint8 Width = 0;
-    uint8 Height = 0;
+    uint8 Width = 3;
+    uint8 Height = 3;
+
+    static constexpr uint8 MinimumSize = 3;
+    static constexpr uint8 MaximumSize = 100;
 
     // 미로의 모든 칸이 들어 있는 배열
     // 1차원 배열로 만들어서 캐싱 효율 증가를 노림

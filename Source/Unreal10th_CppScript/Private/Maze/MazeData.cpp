@@ -18,8 +18,8 @@ void FMazeData::MakeMaze(uint8 InWidth, uint8 InHeight, int32 InSeed, EMazeAlgor
 {
     ClearMaze();
 
-    Width = InWidth;
-    Height = InHeight;
+    Width = FMath::Clamp(InWidth, MinimumSize, MaximumSize);
+    Height = FMath::Clamp(InHeight, MinimumSize, MaximumSize);
 
     if (RandomSeed == InSeed)
     {
@@ -59,7 +59,7 @@ void FMazeData::ExecuteEllerAlgorithm()
     TArray<FEllerCellData> EllerCells;
     EllerCells.SetNum(Width * Height);
 
-    int32 CurrentCellSet = 1;
+    int32 CurrentSetID = 1;
     for (uint8 y = 0; y < Height; y++)
     {
         for (uint8 x = 0; x < Width; x++)
@@ -69,24 +69,11 @@ void FMazeData::ExecuteEllerAlgorithm()
             Cell.X = x;
             Cell.Y = y;
             Cell.Path = EDirectionType::None;
-            Cell.SetID = CurrentCellSet++;
+            Cell.SetID = CurrentSetID++;
         }
     }
 
-    //TArray<FCellData*> CellRow;
-    //CellRow.Reserve(Width);
-
-    //for (uint8 x = 0; x < Width; x++)
-    //{
-    //    FCellData* Cell = GetCell(x, 0);
-    //    Cell->X = x;
-    //    Cell->Y = 0;
-    //    Cell->SetID = CurrentCellSet++;
-    //    CellRow.Add(Cell);
-    //}
-
-    //for (int y = 0; y < 4; y++)
-    for (int y = 0; y < Height - 1; y++)
+    for (int y = 0; y < Height; y++)
     {
         // Join
         TArray<int> Joins = SelectRandomNumbers(1, Width - 1, RandomStream.RandRange(0, Width - 1));
@@ -98,24 +85,26 @@ void FMazeData::ExecuteEllerAlgorithm()
 
             if (Cell_1.SetID != Cell_2.SetID)
             {
-                int32 MinCellSet = FMath::Min(Cell_1.SetID, Cell_2.SetID);
-                int32 CellSet_1 = Cell_1.SetID;
-                int32 CellSet_2 = Cell_2.SetID;
+                // Populate
+                int32 PrevSetID = Cell_2.SetID;
+                int32 NewSetID = Cell_1.SetID;
                 for (int x = 0; x < Width; x++)
                 {
                     FEllerCellData& Cell = EllerCells[LocationToIndex(x, y)];
-                    if (Cell.SetID == CellSet_1 || Cell.SetID == CellSet_2)
+                    if (Cell.SetID == PrevSetID)
                     {
-                        Cell.SetID = MinCellSet;
+                        Cell.SetID = NewSetID;
                     }
                 }
-                //Cell_1.SetID = MinCellSet;
-                //Cell_2.SetID = MinCellSet;
+
                 ConnectCells(&Cell_1, &Cell_2);
             }
         }
 
-        //ExecuteEllerAlgorithmSingleRow(CellRow, y);
+        if (y == Height - 1)
+        {
+            break;
+        }
 
         // Vertical
         TMap<int32, TArray<int>> CellSetMap;
@@ -140,99 +129,26 @@ void FMazeData::ExecuteEllerAlgorithm()
         }
 
         // Fill Cell Sets
-        CurrentCellSet = 0;
+        CurrentSetID = 0;
         for (int x = 0; x < Width; x++)
         {
             FEllerCellData& Cell = EllerCells[LocationToIndex(x, y + 1)];
-            CurrentCellSet = FMath::Max(CurrentCellSet, Cell.SetID);
+            CurrentSetID = FMath::Max(CurrentSetID, Cell.SetID);
         }
-        CurrentCellSet++;
+        CurrentSetID++;
 
         for (int x = 0; x < Width; x++)
         {
             FEllerCellData& Cell = EllerCells[LocationToIndex(x, y + 1)];
             if (Cell.SetID == 0)
             {
-                Cell.SetID = CurrentCellSet++;
+                Cell.SetID = CurrentSetID++;
             }
-        }
-    }
-
-    // Last Row
-    for (int x = 1; x < Width; x++)
-    {
-        FEllerCellData& Cell_1 = EllerCells[LocationToIndex(x - 1, Height - 1)];
-        FEllerCellData& Cell_2 = EllerCells[LocationToIndex(x, Height - 1)];
-
-        if (Cell_1.SetID != Cell_2.SetID)
-        {
-            int32 TargetCellSet = Cell_2.SetID;
-            for (int i = 0; i < Width; i++)
-            {
-                FEllerCellData& Cell = EllerCells[LocationToIndex(i, Height - 1)];
-                if (Cell.SetID == TargetCellSet)
-                {
-                    Cell.SetID = Cell_1.SetID;
-                }
-            }
-            //Cell_2->SetID = Cell_1->SetID;
-            ConnectCells(&Cell_1, &Cell_2);
         }
     }
 
     // 최종 생성 결과를 FMazeData의 Cells 배열로 복사
     CopyToCells(EllerCells);
-}
-
-TArray<FEllerCellData*> FMazeData::ExecuteEllerAlgorithmSingleRow(TArray<FEllerCellData*>& InCellRow, int InRowNum)
-{
-    TArray<FEllerCellData*> CellRow;
-    CellRow.Reserve(Width);
-    /*
-    // Vertical
-    TMap<int32, TArray<int>> CellSetMap;
-    for (int x = 0; x < Width; x++)
-    {
-        FEllerCellData* Cell = EllerCells[LocationToIndex(x, InRowNum)];
-        CellSetMap.FindOrAdd(Cell->SetID).Add(x);
-    }
-
-    for (const auto& [SetID, CellIndexs] : CellSetMap)
-    {
-        TArray<int> Verticals = SelectRandomNumbers(0, CellIndexs.Num() - 1, RandomStream.RandRange(1, CellIndexs.Num()));
-        for (int i = 0; i < Verticals.Num(); i++)
-        {
-            int x = CellIndexs[Verticals[i]];
-            FEllerCellData* Cell = EllerCells[LocationToIndex(x, InRowNum)];
-            FEllerCellData* VerticalCell = EllerCells[LocationToIndex(x, InRowNum + 1)];
-
-            VerticalCell->SetID = Cell->SetID;
-            ConnectCells(Cell, VerticalCell);
-        }
-    }
-
-    // Fill Cell Sets
-    int32 CurrentCellSet = 0;
-    for (int x = 0; x < Width; x++)
-    {
-        FEllerCellData* Cell = EllerCells[LocationToIndex(x, InRowNum + 1)];
-        CurrentCellSet = FMath::Max(CurrentCellSet, Cell->SetID);
-    }
-    CurrentCellSet++;
-
-    for (int x = 0; x < Width; x++)
-    {
-        FEllerCellData* Cell = EllerCells[LocationToIndex(x, InRowNum + 1)];
-        if (Cell->SetID == 0)
-        {
-            Cell->SetID = CurrentCellSet++;
-        }
-    }
-
-    return CellRow;
-    */
-
-    return CellRow;
 }
 
 void FMazeData::ExecuteWilsonAlgorithm()
