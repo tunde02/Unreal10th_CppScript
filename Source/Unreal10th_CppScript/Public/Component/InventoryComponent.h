@@ -43,7 +43,6 @@ public:
             Clear();
         }
     }
-
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
