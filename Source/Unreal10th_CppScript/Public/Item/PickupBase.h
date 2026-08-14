@@ -27,11 +27,15 @@ protected:
     virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
 
     virtual void OnPickup(AActor* InTarget);
+    virtual void OnUpdatePickupEffect();
+    virtual void OnFinishPickupEffect();
     virtual void OnUpdateUpDownSpin(float InDeltaTime);
     virtual UMeshComponent* GetMesh() const;
 
 private:
     bool IsCurveAssetReady() const;
+    bool IsPickupEffectAssetReady() const;
+    void HandlePickupEffect(AActor* InTarget);
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -65,9 +69,31 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Default")
     float UpDownHeight = 100.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    TObjectPtr<UCurveFloat> PickupAlpha;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    TObjectPtr<UCurveFloat> PickupHeight;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    TObjectPtr<UCurveFloat> PickupScale;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    float PickupEffectDuration = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
+    float PickupEffectHeight = 50.0f;
+
+    TWeakObjectPtr<AActor> TargetActor = nullptr;
+    FTimerHandle PickupEffectTimerHandle;
+
 private:
     bool bIdle = true;
     float ElapsedTime = 0.0f;
     FVector MeshZOffset = FVector(0.0f, 0.0f, -10.f);
+
+    const float TimerInterval = 0.02f; // 아이템을 줍는 연출용 타이머의 실행 간격
+    float PickupElapsedTime = 0.0f;
+    FVector PickupStartLocation;
 
 };

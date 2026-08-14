@@ -4,6 +4,9 @@
 #include "Item/PickupBase.h"
 #include "Unreal10th_CppScript/Unreal10th_CppScript.h"
 #include "Data/Item/ItemDataAsset.h"
+#include "Interface/InventoryUserInterface.h"
+#include "Component/InventoryCommandTypes.h"
+#include "Framework/Subsystem/PickupFactorySubsystem.h"
 
 #include "Components/SphereComponent.h"
 #include "Components/MeshComponent.h"
@@ -16,7 +19,7 @@ APickupBase::APickupBase()
     SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("RootCollision"));
     SphereCollision->InitSphereRadius(100.0f);
     SphereCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
-    SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
+    //SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
     SetRootComponent(SphereCollision);
 
     NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("VFX"));
@@ -35,6 +38,20 @@ void APickupBase::BeginPlay()
     ElapsedTime = 0.0f;
 
     NiagaraComponent->SetRelativeLocation(MeshZOffset);
+
+    FTimerHandle Handle;
+    GetWorldTimerManager().SetTimer(
+        Handle,
+        FTimerDelegate::CreateWeakLambda(
+            this,
+            [this]() {
+                UE_LOG(LogTemp, Log, TEXT("Hello Collision Timer"));
+                SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
+            }
+        ),
+        4.0f,
+        false
+    );
 }
 
 void APickupBase::Tick(float DeltaTime)
@@ -57,9 +74,70 @@ void APickupBase::NotifyActorBeginOverlap(AActor* OtherActor)
 void APickupBase::OnPickup(AActor* InTarget)
 {
     UE_LOG(LogTemp, Log, TEXT("%s(이)가 %s를 획득했습니다."),
-           InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"),
-           *GetName());
+           InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"), *GetName());
     bIdle = false;
+
+    if (IInventoryUserInterface* InventoryUser = Cast<IInventoryUserInterface>(InTarget))
+    {
+        FInventoryCommand Command = FInventoryCommand::MakeAddCommand(DataAsset, 1);
+        FInventoryCommandResult Result;
+        if (!InventoryUser->ExecuteInventoryCommand(Command, Result))
+        {
+            UPickupFactorySubsystem* Factory = GetWorld()->GetSubsystem<UPickupFactorySubsystem>();
+            Factory->SpawnPickupAsync(
+                DataAsset,
+                InTarget->GetActorTransform(),
+                FOnPickupSpawned::CreateWeakLambda(
+                    this,
+                    [this, InTarget](APickupBase* InSpawned) {
+                        if (InTarget)
+                        {
+                            HandlePickupEffect(InTarget);
+                        }
+                    }
+                )
+            );
+        }
+        else
+        {
+            HandlePickupEffect(InTarget);
+        }
+    }
+}
+
+void APickupBase::OnUpdatePickupEffect()
+{
+    if (!TargetActor.IsValid())
+    {
+        OnFinishPickupEffect();
+        return;
+    }
+
+    PickupElapsedTime += TimerInterval;
+
+    float Duration = FMath::Max(PickupEffectDuration, 0.001f);
+    float Progress = PickupElapsedTime / Duration;
+
+    float DistanceAlpha = PickupAlpha->GetFloatValue(Progress);
+    FVector Goal = TargetActor.Get()->GetActorLocation();
+    FVector NewLocation = FMath::Lerp(PickupStartLocation, Goal, DistanceAlpha);
+
+    float HeightOffset = PickupHeight->GetFloatValue(Progress) * PickupEffectHeight;
+    NewLocation.Z += HeightOffset;
+    GetMesh()->SetWorldLocation(NewLocation);
+
+    float Scale = PickupScale->GetFloatValue(Progress);
+    GetMesh()->SetRelativeScale3D(FVector(Scale));
+
+    if (Progress >= 1.0f)
+    {
+        OnFinishPickupEffect();
+    }
+}
+
+void APickupBase::OnFinishPickupEffect()
+{
+    Destroy();
 }
 
 void APickupBase::OnUpdateUpDownSpin(float InDeltaTime)
@@ -96,3 +174,34 @@ bool APickupBase::IsCurveAssetReady() const
     return UpDownCurve != nullptr && SpinCurve != nullptr;
 }
 
+bool APickupBase::IsPickupEffectAssetReady() const
+{
+    return PickupAlpha != nullptr && PickupHeight != nullptr && PickupScale != nullptr;
+}
+
+void APickupBase::HandlePickupEffect(AActor* InTarget)
+{
+    TargetActor = InTarget;
+
+    // 에셋이 준비되어 있지 않으면 즉시 획득 처리
+    if (!IsPickupEffectAssetReady())
+    {
+        UE_LOG(LogTemp, Log, TEXT("에셋이 준비되어 있지 않아 즉시 획득"));
+        OnFinishPickupEffect();
+        return;
+    }
+
+    // 더 이상 오버랩이 발생하지 않게 하기
+    SphereCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    PickupElapsedTime = 0.0f;
+    PickupStartLocation = GetMesh()->GetComponentLocation();
+
+    GetWorldTimerManager().SetTimer(
+        PickupEffectTimerHandle,
+        this,
+        &APickupBase::OnUpdatePickupEffect,
+        TimerInterval,
+        true
+    );
+}

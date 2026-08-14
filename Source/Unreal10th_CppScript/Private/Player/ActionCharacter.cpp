@@ -5,6 +5,7 @@
 
 #include "Component/StatComponent.h"
 #include "Component/WeaponComponent.h"
+#include "Component/InventoryComponent.h"
 #include "Interface/StaminaInterface.h"
 #include "AnimNotify/AnimNotifyState_SectionJump.h"
 #include "Data/Item/WeaponDataAsset.h"
@@ -31,6 +32,7 @@ AActionCharacter::AActionCharacter()
 
     StatComponent = CreateDefaultSubobject<UStatComponent>(TEXT("Stat"));
     WeaponComponent = CreateDefaultSubobject<UWeaponComponent>(TEXT("Weapon"));
+    InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory"));
 
     bUseControllerRotationYaw = false; // 컨트롤러를 움질일 때 폰이 같이 회전되는 것 방지
     GetCharacterMovement()->bOrientRotationToMovement = true; // 캐릭터 이동 방향으로 바라보게 만들기
@@ -44,6 +46,16 @@ void AActionCharacter::EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData
     }
 }
 
+bool AActionCharacter::ExecuteInventoryCommand(const FInventoryCommand& Command, FInventoryCommandResult& OutResult)
+{
+    if (GetInventoryComponent())
+    {
+        return InventoryComponent->ExecuteCommand(Command, OutResult);
+    }
+
+    return false;
+}
+
 UStatComponent* AActionCharacter::GetStatComponent() const
 {
     return StatComponent;
@@ -52,6 +64,11 @@ UStatComponent* AActionCharacter::GetStatComponent() const
 UWeaponComponent* AActionCharacter::GetWeaponComponent() const
 {
     return WeaponComponent;
+}
+
+UInventoryComponent* AActionCharacter::GetInventoryComponent() const
+{
+    return InventoryComponent;
 }
 
 void AActionCharacter::BeginPlay()
