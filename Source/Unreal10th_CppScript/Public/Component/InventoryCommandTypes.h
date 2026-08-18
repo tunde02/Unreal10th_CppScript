@@ -13,7 +13,8 @@ enum class EInventoryCommandType : uint8
     Add,
     Move,
     Drop,
-    Use
+    Use,
+    Money
 };
 
 USTRUCT(BlueprintType)
@@ -37,10 +38,7 @@ struct UNREAL10TH_CPPSCRIPT_API FInventoryCommand
     int32 TargetIndex = 0;
 
     UPROPERTY(BlueprintReadWrite, Category = "Inventory|Command")
-    FVector2D ScreenPosition = FVector2D::ZeroVector;
-
-    UPROPERTY(BlueprintReadWrite, Category = "Inventory|Command")
-    FTransform DropTransform = FTransform::Identity;
+    FVector DropLocation = FVector::ZeroVector;
 
 public:
     // Add 커맨드를 생성해주는 함수
@@ -54,37 +52,40 @@ public:
         return Command;
     }
 
-    static FInventoryCommand MakeMoveCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSourceIndex, int32 InTargetIndex)
+    static FInventoryCommand MakeMoveCommand(int32 InSourceIndex, int32 InTargetIndex)
     {
         FInventoryCommand Command;
         Command.Type = EInventoryCommandType::Move;
-        Command.ItemData = InItemData;
-        Command.Count = InCount;
         Command.SourceIndex = InSourceIndex;
         Command.TargetIndex = InTargetIndex;
 
         return Command;
     }
 
-    static FInventoryCommand MakeDropCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSlotIndex, FTransform InTransform)
+    static FInventoryCommand MakeDropCommand(int32 InSlotIndex, const FVector& InDropLocation)
     {
         FInventoryCommand Command;
         Command.Type = EInventoryCommandType::Drop;
-        Command.ItemData = InItemData;
-        Command.Count = InCount;
         Command.SourceIndex = InSlotIndex;
-        Command.DropTransform = InTransform;
+        Command.DropLocation = InDropLocation;
 
         return Command;
     }
 
-    static FInventoryCommand MakeUseCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSlotIndex)
+    static FInventoryCommand MakeUseCommand(int32 InSlotIndex)
     {
         FInventoryCommand Command;
         Command.Type = EInventoryCommandType::Use;
-        Command.ItemData = InItemData;
-        Command.Count = InCount;
         Command.SourceIndex = InSlotIndex;
+
+        return Command;
+    }
+
+    static FInventoryCommand MakeMoneyCommand(int32 InMoneyDiff)
+    {
+        FInventoryCommand Command;
+        Command.Type = EInventoryCommandType::Money;
+        Command.Count = InMoneyDiff;
 
         return Command;
     }

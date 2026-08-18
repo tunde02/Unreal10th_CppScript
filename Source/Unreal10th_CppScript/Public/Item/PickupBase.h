@@ -35,7 +35,7 @@ protected:
 private:
     bool IsCurveAssetReady() const;
     bool IsPickupEffectAssetReady() const;
-    void HandlePickupEffect(AActor* InTarget);
+    void HandlePickupEffect();
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

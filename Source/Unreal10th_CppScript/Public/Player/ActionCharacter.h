@@ -57,6 +57,7 @@ protected:
     void OnRollAction(const FInputActionValue& InValue);
     void OnSprintStart();
     void OnSprintEnd();
+    void OnInventoryAction(const FInputActionValue& InValue);
 
 private:
     void SpendSprintStamina(float DeltaTime);
@@ -76,6 +77,9 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TObjectPtr<UInputAction> IA_Sprint = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    TObjectPtr<UInputAction> IA_Inventory = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Action Anims")
     TObjectPtr<UAnimMontage> AttackMontage = nullptr;

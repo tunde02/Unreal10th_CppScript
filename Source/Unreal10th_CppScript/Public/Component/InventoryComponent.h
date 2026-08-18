@@ -46,6 +46,10 @@ public:
     }
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryAction);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryChange, const TArray<FInvenSlot>&, InSlots);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMoneyChange, int32, InMoney);
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class UNREAL10TH_CPPSCRIPT_API UInventoryComponent : public UActorComponent
 {
@@ -57,6 +61,8 @@ public:
     // 커맨드 실행용 함수
     UFUNCTION(BlueprintCallable, Category = "Inventory|Command")
     bool ExecuteCommand(const FInventoryCommand& Command, FInventoryCommandResult& OutResult);
+
+    void BrodcastOnInventoryAction() const;
 
     /* Getter **************************************************/
     int32 GetMoney() const { return Money; }
@@ -73,27 +79,18 @@ protected:
     UFUNCTION(BlueprintCallable)
     int32 AddItem(const UItemDataAsset* InItemData, int32 InCount);
 
-    UFUNCTION(BlueprintCallable)
     void UseItem(int32 InSlotIndex);
-
-    // EInventoryCommandType::Move 테스트용 함수
-    UFUNCTION(BlueprintCallable)
-    void MoveItem(int32 InSourceIndex, int32 InTargetIndex);
-
-    // EInventoryCommandType::Drop 테스트용 함수
-    UFUNCTION(BlueprintCallable)
-    void DropItem(int32 InIndex, FTransform InTransform);
-
-    void UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount);
     void SetSlot(int32 InSlotIndex, const UItemDataAsset* InItemData, int32 InCount);
+    void UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount);
     void ClearSlot(int32 InSlotIndex);
 
     inline bool IsValidIndex(int32 InSlotIndex) const { return 0 <= InSlotIndex && InSlotIndex < InventorySize; }
 
     bool HandleAddCommand(const UItemDataAsset* InItemData, int32 InCount, FInventoryCommandResult& OutResult);
-    bool HandleMoveCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSourceIndex, int32 InTargetIndex, FInventoryCommandResult& OutResult);
-    bool HandleDropCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSlotIndex, FTransform InTransform, FInventoryCommandResult& OutResult);
-    bool HandleUseCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSlotIndex, FInventoryCommandResult& OutResult);
+    bool HandleMoveCommand(int32 InSourceIndex, int32 InTargetIndex, FInventoryCommandResult& OutResult);
+    bool HandleDropCommand(int32 InSlotIndex, const FVector& InDropLocation, FInventoryCommandResult& OutResult);
+    bool HandleUseCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult);
+    bool HandleMoneyCommand(int32 InMoneyDiff, FInventoryCommandResult& OutResult);
 
     virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
@@ -104,6 +101,11 @@ private:
 
     // 비어 있는 슬롯을 찾는 함수
     int32 FindEmptySlot();
+
+public:
+    FOnInventoryAction OnInventoryAction;
+    FOnInventoryChange OnInventoryChange;
+    FOnMoneyChange OnMoneyChange;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Money")

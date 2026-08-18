@@ -121,6 +121,7 @@ void AActionCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
         EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AActionCharacter::OnMoveAction);
         EnhancedInputComponent->BindAction(IA_Attack, ETriggerEvent::Started, this, &AActionCharacter::OnAttackAction);
         EnhancedInputComponent->BindAction(IA_Roll, ETriggerEvent::Started, this, &AActionCharacter::OnRollAction);
+        EnhancedInputComponent->BindAction(IA_Inventory, ETriggerEvent::Started, this, &AActionCharacter::OnInventoryAction);
 
         EnhancedInputComponent->BindActionValueLambda(
             IA_Sprint,
@@ -228,6 +229,14 @@ void AActionCharacter::OnSprintEnd()
     bSprintMode = false;
 
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+}
+
+void AActionCharacter::OnInventoryAction(const FInputActionValue& InValue)
+{
+    if (GetInventoryComponent())
+    {
+        GetInventoryComponent()->BrodcastOnInventoryAction();
+    }
 }
 
 void AActionCharacter::SpendSprintStamina(float DeltaTime)

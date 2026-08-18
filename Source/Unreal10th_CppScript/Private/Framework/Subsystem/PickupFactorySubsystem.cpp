@@ -69,7 +69,7 @@ void UPickupFactorySubsystem::SpawnPickupAsync(UItemDataAsset* InItemDataAsset, 
     }
 
     // 로드 되었으면 즉시 스폰
-    if (!InItemDataAsset->IsLoaded())
+    if (InItemDataAsset->IsLoaded())
     {
         APickupBase* Spawned = SpawnProcess(InItemDataAsset, InTransform);
         OnSpawned.ExecuteIfBound(Spawned);

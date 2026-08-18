@@ -20,31 +20,18 @@ bool UInventoryComponent::ExecuteCommand(const FInventoryCommand& Command, FInve
     {
         case EInventoryCommandType::Add:
             HandleAddCommand(Command.ItemData, Command.Count, OutResult);
-            if (OutResult.bSuccess)
-            {
-                UE_LOG(LogTemp, Log, TEXT("[%s] 가 성공적으로 인벤토리에 추가되었습니다."), *Command.ItemData->DisplayName.ToString());
-            }
-            else
-            {
-                UE_LOG(LogTemp, Log, TEXT("%d개의 아이템이 남았습니다."), OutResult.RemainingCount);
-            }
             break;
         case EInventoryCommandType::Move:
-            HandleMoveCommand(Command.ItemData, Command.Count, Command.SourceIndex, Command.TargetIndex, OutResult);
-            if (OutResult.bSuccess)
-            {
-                UE_LOG(LogTemp, Log, TEXT("[%s] 가 성공적으로 %d번 슬롯에 옮겨졌습니다."), *Command.ItemData->DisplayName.ToString(), Command.TargetIndex);
-            }
-            else
-            {
-                UE_LOG(LogTemp, Log, TEXT("아이템 슬롯 옮기기 실패.."), OutResult.RemainingCount);
-            }
+            HandleMoveCommand(Command.SourceIndex, Command.TargetIndex, OutResult);
             break;
         case EInventoryCommandType::Drop:
-            HandleDropCommand(Command.ItemData, Command.Count, Command.SourceIndex, Command.DropTransform, OutResult);
+            HandleDropCommand(Command.SourceIndex, Command.DropLocation, OutResult);
             break;
         case EInventoryCommandType::Use:
-            HandleUseCommand(Command.ItemData, Command.Count, Command.SourceIndex, OutResult);
+            HandleUseCommand(Command.SourceIndex, OutResult);
+            break;
+        case EInventoryCommandType::Money:
+            HandleMoneyCommand(Command.Count, OutResult);
             break;
         case EInventoryCommandType::None:
         default:
@@ -52,7 +39,17 @@ bool UInventoryComponent::ExecuteCommand(const FInventoryCommand& Command, FInve
             break;
     }
 
+    OnInventoryChange.Broadcast(Slots);
+    OnMoneyChange.Broadcast(Money);
+
     return OutResult.bSuccess;
+}
+
+void UInventoryComponent::BrodcastOnInventoryAction() const
+{
+    OnInventoryChange.Broadcast(Slots);
+    OnMoneyChange.Broadcast(Money);
+    OnInventoryAction.Broadcast();
 }
 
 FInvenSlot* UInventoryComponent::GetSlot(int InSlotIndex)
@@ -127,6 +124,7 @@ int32 UInventoryComponent::AddItem(const UItemDataAsset* InItemData, int32 InCou
 
 void UInventoryComponent::UseItem(int32 InSlotIndex)
 {
+    /*
     if (!IsValidIndex(InSlotIndex))
     {
         UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.UseItem()] : 유효하지 않은 인덱스 (Index: %d)"), InSlotIndex);
@@ -140,11 +138,28 @@ void UInventoryComponent::UseItem(int32 InSlotIndex)
         return;
     }
 
-    FInventoryCommand UseCommand = FInventoryCommand::MakeUseCommand(SourceSlot.ItemData, SourceSlot.GetCount(), InSlotIndex);
+    FInventoryCommand UseCommand = FInventoryCommand::MakeUseCommand(InSlotIndex);
     FInventoryCommandResult Result;
     ExecuteCommand(UseCommand, Result);
+    */
+
+    if (!IsValidIndex(InSlotIndex))
+    {
+        return;
+    }
+
+    FInvenSlot& Slot = Slots[InSlotIndex];
+
+    if (Slot.IsEmpty())
+    {
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleUseCommand()] : %s를 사용했습니다."), *Slot.ItemData->DisplayName.ToString());
+    UpdateSlotCount(InSlotIndex, -1);
 }
 
+/*
 void UInventoryComponent::MoveItem(int32 InSourceIndex, int32 InTargetIndex)
 {
     if (!IsValidIndex(InSourceIndex) || !IsValidIndex(InTargetIndex))
@@ -192,6 +207,21 @@ void UInventoryComponent::DropItem(int32 InIndex, FTransform InTransform)
     FInventoryCommandResult Result;
     ExecuteCommand(DropCommand, Result);
 }
+*/
+
+void UInventoryComponent::SetSlot(int32 InSlotIndex, const UItemDataAsset* InItemData, int32 InCount)
+{
+    if (!IsValidIndex(InSlotIndex))
+    {
+        return;
+    }
+
+    FInvenSlot& Slot = Slots[InSlotIndex];
+    Slot.ItemData = InItemData;
+    Slot.SetCount(InCount);
+
+    // 델리게이트 전담 함수
+}
 
 void UInventoryComponent::UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount)
 {
@@ -208,20 +238,6 @@ void UInventoryComponent::UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount)
 
     int32 NewCount = Slot.GetCount() + InDeltaCount;
     Slot.SetCount(NewCount);
-}
-
-void UInventoryComponent::SetSlot(int32 InSlotIndex, const UItemDataAsset* InItemData, int32 InCount)
-{
-    if (!IsValidIndex(InSlotIndex))
-    {
-        return;
-    }
-
-    FInvenSlot& Slot = Slots[InSlotIndex];
-    Slot.ItemData = InItemData;
-    Slot.SetCount(InCount);
-
-    // 델리게이트 전담 함수
 }
 
 void UInventoryComponent::ClearSlot(int32 InSlotIndex)
@@ -244,34 +260,85 @@ bool UInventoryComponent::HandleAddCommand(const UItemDataAsset* InItemData, int
         OutResult.RemainingCount = 0;
     }
 
+    if (OutResult.bSuccess)
+    {
+        UE_LOG(LogTemp, Log, TEXT("[%s] 추가가 성공적으로 완료되었습니다."), *(InItemData->DisplayName.ToString()));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("%d개의 아이템이 남았습니다."), OutResult.RemainingCount);
+    }
+
     return OutResult.bSuccess;
 }
 
-bool UInventoryComponent::HandleMoveCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSourceIndex, int32 InTargetIndex, FInventoryCommandResult& OutResult)
+bool UInventoryComponent::HandleMoveCommand(int32 InSourceIndex, int32 InTargetIndex, FInventoryCommandResult& OutResult)
 {
     OutResult.bSuccess = false;
 
-    if (!IsValidIndex(InTargetIndex))
+    if (!IsValidIndex(InSourceIndex) || !IsValidIndex(InTargetIndex))
     {
         return OutResult.bSuccess;
     }
 
-    if (!IsValidIndex(InSourceIndex))
+    if (InSourceIndex == InTargetIndex)
+    {
+        OutResult.bSuccess = true;
+        return OutResult.bSuccess;
+    }
+
+    FInvenSlot& SourceSlot = Slots[InSourceIndex];
+    FInvenSlot& TargetSlot = Slots[InTargetIndex];
+
+    if (SourceSlot.IsEmpty())
     {
         return OutResult.bSuccess;
     }
 
-    FInvenSlot& Slot = Slots[InTargetIndex];
-    Slot.ItemData = InItemData;
-    Slot.SetCount(InCount);
+    // 1. 타겟 슬롯이 비어있다 -> 그대로 이동
+    if (TargetSlot.IsEmpty())
+    {
+        SetSlot(InTargetIndex, SourceSlot.ItemData, SourceSlot.GetCount());
+        ClearSlot(InSourceIndex);
 
-    Slots[InSourceIndex].Clear();
-    OutResult.bSuccess = true;
+        OutResult.bSuccess = true;
+    }
+    // 2. 소스와 타겟 슬롯이 같은 아이템이다 -> 병합
+    else if (TargetSlot.ItemData == SourceSlot.ItemData)
+    {
+        int32 AmountToAdd = FMath::Min(SourceSlot.GetCount(), TargetSlot.GetRemainingCount());
+
+        if (AmountToAdd > 0)
+        {
+            UpdateSlotCount(InTargetIndex, AmountToAdd);
+            UpdateSlotCount(InSourceIndex, -AmountToAdd);
+
+            OutResult.bSuccess = true;
+        }
+        else
+        {
+            OutResult.bSuccess = false;
+        }
+    }
+    // 3. 소스와 타겟 슬롯이 서로 다른 아이템이다 -> 스왑
+    else
+    {
+        const UItemDataAsset* SourceItem = SourceSlot.ItemData;
+        int32 SourceCount = SourceSlot.GetCount();
+
+        const UItemDataAsset* TargetItem = TargetSlot.ItemData;
+        int32 TargetCount = TargetSlot.GetCount();
+
+        SetSlot(InSourceIndex, TargetItem, TargetCount);
+        SetSlot(InTargetIndex, SourceItem, SourceCount);
+
+        OutResult.bSuccess = true;
+    }
 
     return OutResult.bSuccess;
 }
 
-bool UInventoryComponent::HandleDropCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSlotIndex, FTransform InTransform, FInventoryCommandResult& OutResult)
+bool UInventoryComponent::HandleDropCommand(int32 InSlotIndex, const FVector& InDropLocation, FInventoryCommandResult& OutResult)
 {
     OutResult.bSuccess = false;
 
@@ -282,16 +349,38 @@ bool UInventoryComponent::HandleDropCommand(const UItemDataAsset* InItemData, in
 
     FInvenSlot& Slot = Slots[InSlotIndex];
 
-    UPickupFactorySubsystem* Factory = GetWorld()->GetSubsystem<UPickupFactorySubsystem>();
-    Factory->SpawnPickup(const_cast<UItemDataAsset*>(Slot.ItemData.Get()), InTransform); // const_cast..??
+    if (Slot.IsEmpty())
+    {
+        return OutResult.bSuccess;
+    }
 
-    Slots[InSlotIndex].Clear();
-    OutResult.bSuccess = true;
+    UWorld* World = GetWorld();
+    const UItemDataAsset* ItemData = Slot.ItemData;
+
+    if (World && ItemData)
+    {
+        if (UPickupFactorySubsystem* Factory = World->GetSubsystem< UPickupFactorySubsystem>())
+        {
+            for (int32 _ = 0; _ < Slot.GetCount(); _++)
+            {
+                FVector SpawnLocation(FMath::RandPointInCircle(100.0f), 0);
+                SpawnLocation += InDropLocation;
+
+                FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
+                Factory->SpawnPickupAsync(const_cast<UItemDataAsset*>(ItemData), SpawnTransform, FOnPickupSpawned());
+            }
+        }
+
+        Slot.Clear();
+
+        OutResult.bSuccess = true;
+        OutResult.RemainingCount = Slot.GetRemainingCount();
+    }
 
     return OutResult.bSuccess;
 }
 
-bool UInventoryComponent::HandleUseCommand(const UItemDataAsset* InItemData, int32 InCount, int32 InSlotIndex, FInventoryCommandResult& OutResult)
+bool UInventoryComponent::HandleUseCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult)
 {
     OutResult.bSuccess = false;
 
@@ -300,9 +389,26 @@ bool UInventoryComponent::HandleUseCommand(const UItemDataAsset* InItemData, int
         return OutResult.bSuccess;
     }
 
-    UpdateSlotCount(InSlotIndex, -1);
-    UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleUseCommand()] : %s를 사용했습니다."), *InItemData->DisplayName.ToString());
+    FInvenSlot& Slot = Slots[InSlotIndex];
 
+    if (Slot.IsEmpty())
+    {
+        return OutResult.bSuccess;
+    }
+
+    UseItem(InSlotIndex);
+
+    OutResult.bSuccess = true;
+    OutResult.RemainingCount = Slot.GetRemainingCount();
+
+    return OutResult.bSuccess;
+}
+
+bool UInventoryComponent::HandleMoneyCommand(int32 InMoneyDiff, FInventoryCommandResult& OutResult)
+{
+    OutResult.bSuccess = false;
+
+    AddMoney(InMoneyDiff);
     OutResult.bSuccess = true;
 
     return OutResult.bSuccess;

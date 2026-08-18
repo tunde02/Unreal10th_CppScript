@@ -45,7 +45,6 @@ void APickupBase::BeginPlay()
         FTimerDelegate::CreateWeakLambda(
             this,
             [this]() {
-                UE_LOG(LogTemp, Log, TEXT("Hello Collision Timer"));
                 SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
             }
         ),
@@ -73,11 +72,17 @@ void APickupBase::NotifyActorBeginOverlap(AActor* OtherActor)
 
 void APickupBase::OnPickup(AActor* InTarget)
 {
+    if (GetWorldTimerManager().IsTimerActive(PickupEffectTimerHandle))
+    {
+        return;
+    }
+
     UE_LOG(LogTemp, Log, TEXT("%s(이)가 %s를 획득했습니다."),
            InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"), *GetName());
     bIdle = false;
+    TargetActor = InTarget;
 
-    if (IInventoryUserInterface* InventoryUser = Cast<IInventoryUserInterface>(InTarget))
+    if (IInventoryUserInterface* InventoryUser = Cast<IInventoryUserInterface>(TargetActor))
     {
         FInventoryCommand Command = FInventoryCommand::MakeAddCommand(DataAsset, 1);
         FInventoryCommandResult Result;
@@ -86,21 +91,18 @@ void APickupBase::OnPickup(AActor* InTarget)
             UPickupFactorySubsystem* Factory = GetWorld()->GetSubsystem<UPickupFactorySubsystem>();
             Factory->SpawnPickupAsync(
                 DataAsset,
-                InTarget->GetActorTransform(),
+                TargetActor->GetActorTransform(),
                 FOnPickupSpawned::CreateWeakLambda(
                     this,
-                    [this, InTarget](APickupBase* InSpawned) {
-                        if (InTarget)
-                        {
-                            HandlePickupEffect(InTarget);
-                        }
+                    [this](APickupBase* InSpawned) {
+                        HandlePickupEffect();
                     }
                 )
             );
         }
         else
         {
-            HandlePickupEffect(InTarget);
+            HandlePickupEffect();
         }
     }
 }
@@ -179,10 +181,8 @@ bool APickupBase::IsPickupEffectAssetReady() const
     return PickupAlpha != nullptr && PickupHeight != nullptr && PickupScale != nullptr;
 }
 
-void APickupBase::HandlePickupEffect(AActor* InTarget)
+void APickupBase::HandlePickupEffect()
 {
-    TargetActor = InTarget;
-
     // 에셋이 준비되어 있지 않으면 즉시 획득 처리
     if (!IsPickupEffectAssetReady())
     {
