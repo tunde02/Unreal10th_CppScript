@@ -8,6 +8,7 @@
 
 class UPlayerStatBarsWidget;
 class UInventoryWidget;
+class UItemDetailPanelWidget;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UMainHudWidget : public UUserWidget
@@ -24,5 +25,8 @@ protected:
 
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UInventoryWidget> Inventory;
+
+    UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
+    TObjectPtr<UItemDetailPanelWidget> ItemDetailPanel;
 
 };

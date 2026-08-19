@@ -77,16 +77,16 @@ void UInventorySlotWidget::RefreshSlot() const
     }
 }
 
-void UInventorySlotWidget::UpdateInventorySlot(const FInvenSlot& InSlot)
+void UInventorySlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-    if (!InSlot.IsEmpty())
-    {
-        CountText->SetText(FText::AsNumber(InSlot.GetCount()));
-        MaxStackText->SetText(FText::AsNumber(InSlot.ItemData->MaxStackCount));
-    }
-    else
-    {
-        CountText->SetText(FText::AsNumber(0));
-        MaxStackText->SetText(FText::AsNumber(0));
-    }
+    Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+
+    TargetInventory->OnSlotHovered.ExecuteIfBound(Slot);
+}
+
+void UInventorySlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
+{
+    TargetInventory->OnSlotHovered.ExecuteIfBound(nullptr);
+
+    Super::NativeOnMouseLeave(InMouseEvent);
 }

@@ -4,6 +4,7 @@
 #include "Widget/MainHudWidget.h"
 #include "Widget/PlayerStatBarsWidget.h"
 #include "Widget/Inventory/InventoryWidget.h"
+#include "Widget/Inventory/ItemDetailPanelWidget.h"
 
 void UMainHudWidget::TestInventoryRefresh() const
 {

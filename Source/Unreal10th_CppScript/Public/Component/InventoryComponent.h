@@ -49,6 +49,7 @@ public:
 DECLARE_DELEGATE_OneParam(FOnSlotChanged, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMoneyChanged, int32);
 DECLARE_DELEGATE(FOnInventoryAction);
+DECLARE_DELEGATE_OneParam(FOnSlotHovered, const FInvenSlot* InSlot);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class UNREAL10TH_CPPSCRIPT_API UInventoryComponent : public UActorComponent
@@ -107,6 +108,7 @@ public:
     FOnSlotChanged OnSlotChanged;
     FOnMoneyChanged OnMoneyChanged;
     FOnInventoryAction OnInventoryAction;
+    FOnSlotHovered OnSlotHovered;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Money")

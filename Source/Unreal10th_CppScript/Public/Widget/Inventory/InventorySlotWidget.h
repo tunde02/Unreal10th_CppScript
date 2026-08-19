@@ -23,7 +23,9 @@ public:
     void InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex);
     void RefreshSlot() const;
 
-    void UpdateInventorySlot(const FInvenSlot& InSlot);
+protected:
+    virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
