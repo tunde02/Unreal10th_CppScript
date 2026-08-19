@@ -39,17 +39,12 @@ bool UInventoryComponent::ExecuteCommand(const FInventoryCommand& Command, FInve
             break;
     }
 
-    OnInventoryChange.Broadcast(Slots);
-    OnMoneyChange.Broadcast(Money);
-
     return OutResult.bSuccess;
 }
 
 void UInventoryComponent::BrodcastOnInventoryAction() const
 {
-    OnInventoryChange.Broadcast(Slots);
-    OnMoneyChange.Broadcast(Money);
-    OnInventoryAction.Broadcast();
+    OnInventoryAction.ExecuteIfBound();
 }
 
 FInvenSlot* UInventoryComponent::GetSlot(int InSlotIndex)
@@ -67,6 +62,7 @@ FInvenSlot* UInventoryComponent::GetTempSlot()
 void UInventoryComponent::AddMoney(int32 InIncome)
 {
     Money += InIncome;
+    OnMoneyChanged.Broadcast(Money);
 }
 
 int32 UInventoryComponent::AddItem(const UItemDataAsset* InItemData, int32 InCount)
@@ -159,56 +155,6 @@ void UInventoryComponent::UseItem(int32 InSlotIndex)
     UpdateSlotCount(InSlotIndex, -1);
 }
 
-/*
-void UInventoryComponent::MoveItem(int32 InSourceIndex, int32 InTargetIndex)
-{
-    if (!IsValidIndex(InSourceIndex) || !IsValidIndex(InTargetIndex))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.MoveItem()] : 유효하지 않은 인덱스 (SourceIndex: %d, TargetIndex: %d)"),
-               InSourceIndex, InTargetIndex);
-        return;
-    }
-
-    FInvenSlot& SourceSlot = Slots[InSourceIndex];
-    if (SourceSlot.IsEmpty())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.MoveItem()] : SourceIndex 슬롯에 아이템이 없음"));
-        return;
-    }
-
-    FInvenSlot& TargetSlot = Slots[InTargetIndex];
-    if (!TargetSlot.IsEmpty() && SourceSlot.ItemData != TargetSlot.ItemData)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.MoveItem()] : TargetIndex 슬롯이 비어있지 않고 SourceIndex 슬롯의 아이템과 서로 다름"));
-        return;
-    }
-
-    FInventoryCommand MoveCommand = FInventoryCommand::MakeMoveCommand(SourceSlot.ItemData, SourceSlot.GetCount(), InSourceIndex, InTargetIndex);
-    FInventoryCommandResult Result;
-    ExecuteCommand(MoveCommand, Result);
-}
-
-void UInventoryComponent::DropItem(int32 InIndex, FTransform InTransform)
-{
-    if (!IsValidIndex(InIndex))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.DropItem()] : 유효하지 않은 인덱스 (Index: %d)"), InIndex);
-        return;
-    }
-
-    FInvenSlot& Slot = Slots[InIndex];
-    if (Slot.IsEmpty())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.DropItem()] : SourceIndex 슬롯에 아이템이 없음"));
-        return;
-    }
-
-    FInventoryCommand DropCommand = FInventoryCommand::MakeDropCommand(Slot.ItemData, Slot.GetCount(), InIndex, InTransform);
-    FInventoryCommandResult Result;
-    ExecuteCommand(DropCommand, Result);
-}
-*/
-
 void UInventoryComponent::SetSlot(int32 InSlotIndex, const UItemDataAsset* InItemData, int32 InCount)
 {
     if (!IsValidIndex(InSlotIndex))
@@ -220,7 +166,20 @@ void UInventoryComponent::SetSlot(int32 InSlotIndex, const UItemDataAsset* InIte
     Slot.ItemData = InItemData;
     Slot.SetCount(InCount);
 
+    if (InItemData && !InItemData->IsLoaded())
+    {
+        InItemData->RequestDataLoad(
+            FStreamableDelegate::CreateWeakLambda(
+                this,
+                [this, InSlotIndex]() {
+                    OnSlotChanged.ExecuteIfBound(InSlotIndex);
+                }
+            )
+        );
+    }
+
     // 델리게이트 전담 함수
+    OnSlotChanged.ExecuteIfBound(InSlotIndex);
 }
 
 void UInventoryComponent::UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount)
@@ -237,7 +196,7 @@ void UInventoryComponent::UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount)
     }
 
     int32 NewCount = Slot.GetCount() + InDeltaCount;
-    Slot.SetCount(NewCount);
+    SetSlot(InSlotIndex, Slot.ItemData, NewCount);
 }
 
 void UInventoryComponent::ClearSlot(int32 InSlotIndex)
@@ -371,10 +330,10 @@ bool UInventoryComponent::HandleDropCommand(int32 InSlotIndex, const FVector& In
             }
         }
 
-        Slot.Clear();
+        ClearSlot(InSlotIndex);
+        //Slot.Clear();
 
         OutResult.bSuccess = true;
-        OutResult.RemainingCount = Slot.GetRemainingCount();
     }
 
     return OutResult.bSuccess;

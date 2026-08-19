@@ -27,13 +27,6 @@ void APickupMisc::InitializePickup(UItemDataAsset* InData)
     }
 }
 
-void APickupMisc::OnConstruction(const FTransform& Transform)
-{
-    Super::OnConstruction(Transform);
-
-    InitializePickup(DataAsset);
-}
-
 UMeshComponent* APickupMisc::GetMesh() const
 {
     return Mesh;

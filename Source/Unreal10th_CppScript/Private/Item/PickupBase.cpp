@@ -31,6 +31,13 @@ void APickupBase::InitializePickup(UItemDataAsset* InData)
     DataAsset = InData;
 }
 
+void APickupBase::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    InitializePickup(DataAsset);
+}
+
 void APickupBase::BeginPlay()
 {
     Super::BeginPlay();
@@ -39,16 +46,16 @@ void APickupBase::BeginPlay()
 
     NiagaraComponent->SetRelativeLocation(MeshZOffset);
 
-    FTimerHandle Handle;
+    FTimerHandle PickupDelayHandle;
     GetWorldTimerManager().SetTimer(
-        Handle,
+        PickupDelayHandle,
         FTimerDelegate::CreateWeakLambda(
             this,
             [this]() {
-                SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
+                OnActorBeginOverlap.AddDynamic(this, &APickupBase::OnBeginOverlap);
             }
         ),
-        4.0f,
+        PickupDelayTime,
         false
     );
 }
@@ -63,53 +70,50 @@ void APickupBase::Tick(float DeltaTime)
     }
 }
 
-void APickupBase::NotifyActorBeginOverlap(AActor* OtherActor)
+void APickupBase::OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
-    Super::NotifyActorBeginOverlap(OtherActor);
-
     OnPickup(OtherActor);
 }
 
 void APickupBase::OnPickup(AActor* InTarget)
 {
+    // 타이머가 이미 작동중이면 종료(중복실행 방지)
     if (GetWorldTimerManager().IsTimerActive(PickupEffectTimerHandle))
     {
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("%s(이)가 %s를 획득했습니다."),
-           InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"), *GetName());
+    //UE_LOG(LogTemp, Log, TEXT("%s(이)가 %s를 획득했습니다."),
+    //       InTarget ? *InTarget->GetName() : TEXT("알 수 없는 대상"), *GetName());
     bIdle = false;
     TargetActor = InTarget;
 
-    if (IInventoryUserInterface* InventoryUser = Cast<IInventoryUserInterface>(TargetActor))
+    // 커브 에셋이 준비되어 있고 메시 컴포넌트가 있으면 연출 시작, 없으면 즉시 획득 처리
+    if (IsPickupEffectAssetReady() && GetMesh())
     {
-        FInventoryCommand Command = FInventoryCommand::MakeAddCommand(DataAsset, 1);
-        FInventoryCommandResult Result;
-        if (!InventoryUser->ExecuteInventoryCommand(Command, Result))
-        {
-            UPickupFactorySubsystem* Factory = GetWorld()->GetSubsystem<UPickupFactorySubsystem>();
-            Factory->SpawnPickupAsync(
-                DataAsset,
-                TargetActor->GetActorTransform(),
-                FOnPickupSpawned::CreateWeakLambda(
-                    this,
-                    [this](APickupBase* InSpawned) {
-                        HandlePickupEffect();
-                    }
-                )
-            );
-        }
-        else
-        {
-            HandlePickupEffect();
-        }
+        // 더 이상의 오버랩이 발생하지 않게 하기
+        SphereCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+        PickupStartLocation = GetMesh()->GetComponentLocation();
+        PickupElapsedTime = 0.0f;
+
+        GetWorldTimerManager().SetTimer(
+            PickupEffectTimerHandle,
+            this,
+            &APickupBase::OnUpdatePickupEffect,
+            TimerInterval,
+            true
+        );
+    }
+    else
+    {
+        OnFinishPickupEffect();
     }
 }
 
 void APickupBase::OnUpdatePickupEffect()
 {
-    if (!TargetActor.IsValid())
+    if (!TargetActor.IsValid() || !GetMesh())
     {
         OnFinishPickupEffect();
         return;
@@ -139,7 +143,38 @@ void APickupBase::OnUpdatePickupEffect()
 
 void APickupBase::OnFinishPickupEffect()
 {
-    Destroy();
+    // 획득 이팩트용 타이머 클리어
+    GetWorldTimerManager().ClearTimer(PickupEffectTimerHandle);
+
+    // 대상의 인벤토리에 아이템 추가
+    if (IInventoryUserInterface* InventoryUser = Cast<IInventoryUserInterface>(TargetActor))
+    {
+        FInventoryCommand Command = FInventoryCommand::MakeAddCommand(DataAsset, 1);
+        FInventoryCommandResult Result;
+        if (!InventoryUser->ExecuteInventoryCommand(Command, Result))
+        {
+            // 실패하면 다시 스폰
+            UPickupFactorySubsystem* Factory = GetWorld()->GetSubsystem<UPickupFactorySubsystem>();
+            FTransform SpawnTransform = TargetActor->GetActorTransform();
+            FVector NewLocation(FMath::RandPointInCircle(300.0f), 0.0f);	// 액터 위치를 중심으로 반경 3m의 서클 안 랜덤 위치
+            SpawnTransform.AddToTranslation(NewLocation);
+            Factory->SpawnPickupAsync(
+                DataAsset,
+                SpawnTransform,
+                FOnPickupSpawned::CreateWeakLambda(
+                    this,
+                    [this](APickupBase* InSpawned) {
+                        UE_LOG(LogTemp, Log, TEXT("%s가 스폰되었습니다."), *InSpawned->GetName());
+                        Destroy(); // 기존에 먹었던 픽업은 삭제
+                    }
+                ));
+        }
+        else
+        {
+            // 성공했으면 인벤토리에 들어갔으니 픽업 삭제
+            Destroy();
+        }
+    }
 }
 
 void APickupBase::OnUpdateUpDownSpin(float InDeltaTime)
@@ -179,29 +214,4 @@ bool APickupBase::IsCurveAssetReady() const
 bool APickupBase::IsPickupEffectAssetReady() const
 {
     return PickupAlpha != nullptr && PickupHeight != nullptr && PickupScale != nullptr;
-}
-
-void APickupBase::HandlePickupEffect()
-{
-    // 에셋이 준비되어 있지 않으면 즉시 획득 처리
-    if (!IsPickupEffectAssetReady())
-    {
-        UE_LOG(LogTemp, Log, TEXT("에셋이 준비되어 있지 않아 즉시 획득"));
-        OnFinishPickupEffect();
-        return;
-    }
-
-    // 더 이상 오버랩이 발생하지 않게 하기
-    SphereCollision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-    PickupElapsedTime = 0.0f;
-    PickupStartLocation = GetMesh()->GetComponentLocation();
-
-    GetWorldTimerManager().SetTimer(
-        PickupEffectTimerHandle,
-        this,
-        &APickupBase::OnUpdatePickupEffect,
-        TimerInterval,
-        true
-    );
 }

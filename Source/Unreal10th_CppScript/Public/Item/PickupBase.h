@@ -22,9 +22,14 @@ public:
     virtual void InitializePickup(UItemDataAsset* InData);
 
 protected:
+    virtual void OnConstruction(const FTransform& Transform) override;
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
-    virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+    //virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+
+    // 오버랩 델리게이트에 바인딩할 함수
+    UFUNCTION()
+    void OnBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 
     virtual void OnPickup(AActor* InTarget);
     virtual void OnUpdatePickupEffect();
@@ -35,7 +40,6 @@ protected:
 private:
     bool IsCurveAssetReady() const;
     bool IsPickupEffectAssetReady() const;
-    void HandlePickupEffect();
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -53,20 +57,24 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Data")
     TObjectPtr<UItemDataAsset> DataAsset;
 
+    // 스폰 직후에 아이템이 안먹어지는 시간
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Base Data")
+    float PickupDelayTime = 1.0f;
+
     // 맵에 있을 때 위아래로 왕복하는 모습용 커브
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Default")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Spawn")
     TObjectPtr<UCurveFloat> UpDownCurve;
 
     // 맵에 있을 때 회전하는 모습용 커브
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Default")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Spawn")
     TObjectPtr<UCurveFloat> SpinCurve;
 
     // 위아래로 왕복하는데 걸리는 시간
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Default")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Spawn")
     float UpDownDuration = 2.0f;
 
     // 위아래로 움직이는 거리
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Default")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Spawn")
     float UpDownHeight = 100.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")

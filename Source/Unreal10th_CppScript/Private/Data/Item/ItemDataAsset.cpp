@@ -16,10 +16,11 @@ TSharedPtr<FStreamableHandle> UItemDataAsset::RequestDataLoad(FStreamableDelegat
 
 bool UItemDataAsset::IsLoaded() const
 {
-    return PickupClass.IsValid();
+    return PickupClass.IsValid() && (Icon.IsNull() || Icon.IsValid());
 }
 
 void UItemDataAsset::OnAsyncRequest(TArray<FSoftObjectPath>& InOutTargetsToLoad) const
 {
     InOutTargetsToLoad.Add(PickupClass.ToSoftObjectPath());
+    InOutTargetsToLoad.Add(Icon.ToSoftObjectPath());
 }

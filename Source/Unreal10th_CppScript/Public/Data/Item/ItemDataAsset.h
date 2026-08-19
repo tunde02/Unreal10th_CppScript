@@ -29,6 +29,9 @@ public:
     FText Description;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")
+    TSoftObjectPtr<UTexture2D> Icon = nullptr;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")
     int32 Price = 1;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base|Data")

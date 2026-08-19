@@ -46,9 +46,9 @@ public:
     }
 };
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryAction);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryChange, const TArray<FInvenSlot>&, InSlots);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMoneyChange, int32, InMoney);
+DECLARE_DELEGATE_OneParam(FOnSlotChanged, int32);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnMoneyChanged, int32);
+DECLARE_DELEGATE(FOnInventoryAction);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class UNREAL10TH_CPPSCRIPT_API UInventoryComponent : public UActorComponent
@@ -67,6 +67,7 @@ public:
     /* Getter **************************************************/
     int32 GetMoney() const { return Money; }
     FInvenSlot* GetSlot(int InSlotIndex);
+    int32 GetSize() const { return InventorySize; }
 
     // 임시 슬롯을 반환하는 함수 (드래그앤 드롭에 사용)
     FInvenSlot* GetTempSlot();
@@ -103,9 +104,9 @@ private:
     int32 FindEmptySlot();
 
 public:
+    FOnSlotChanged OnSlotChanged;
+    FOnMoneyChanged OnMoneyChanged;
     FOnInventoryAction OnInventoryAction;
-    FOnInventoryChange OnInventoryChange;
-    FOnMoneyChange OnMoneyChange;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Money")

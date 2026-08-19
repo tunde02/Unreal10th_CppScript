@@ -7,6 +7,7 @@
 #include "InventorySlotWidget.generated.h"
 
 class UImage;
+class UHorizontalBox;
 class UTextBlock;
 class UInventoryComponent;
 struct FInvenSlot;
@@ -19,7 +20,9 @@ class UNREAL10TH_CPPSCRIPT_API UInventorySlotWidget : public UUserWidget
 public:
     virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
-    void InitializeInventorySlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex);
+    void InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex);
+    void RefreshSlot() const;
+
     void UpdateInventorySlot(const FInvenSlot& InSlot);
 
 protected:
@@ -27,7 +30,7 @@ protected:
     TObjectPtr<UImage> IconImage = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
-    TObjectPtr<UTextBlock> DisplayNameText = nullptr;
+    TObjectPtr<UHorizontalBox> CountBox = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UTextBlock> CountText = nullptr;
@@ -36,7 +39,12 @@ protected:
     TObjectPtr<UTextBlock> MaxStackText = nullptr;
 
 private:
-    TWeakObjectPtr<UInventoryComponent> InventoryComponent = nullptr;
-    int32 SlotIndex = 0;
+    UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+    TWeakObjectPtr<UInventoryComponent> TargetInventory = nullptr;
 
+    static constexpr int32 InvalidIndex = -1;
+
+    int32 Index = InvalidIndex;
+
+    const FInvenSlot* Slot = nullptr;
 };

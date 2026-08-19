@@ -14,9 +14,9 @@ class UNREAL10TH_CPPSCRIPT_API UMoneyPanelWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
-    void UpdateMoneyText(int32 InMoney);
+    void SetMoney(int32 InMoney);
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
+    UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UTextBlock> MoneyText;
 };

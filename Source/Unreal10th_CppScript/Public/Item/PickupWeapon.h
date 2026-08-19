@@ -22,48 +22,20 @@ public:
 
 protected:
     virtual void BeginPlay() override;
-    virtual void OnConstruction(const FTransform& Transform) override;
-
-    //virtual void OnPickup(AActor* InTarget) override;
-    //virtual void OnUpdatePickupEffect() override;
-    virtual void OnFinishPickupEffect() override;
+    //virtual void OnFinishPickupEffect() override;
     virtual UMeshComponent* GetMesh() const override;
 
 private:
     //bool IsPickupEffectAssetReady() const;
 
 protected:
-    //UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
-    //TObjectPtr<UCurveFloat> PickupAlpha;
-
-    //UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
-    //TObjectPtr<UCurveFloat> PickupHeight;
-
-    //UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
-    //TObjectPtr<UCurveFloat> PickupScale;
-
-    //UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
-    //float PickupEffectDuration = 0.5f;
-
-    //UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect|Pickup")
-    //float PickupEffectHeight = 50.0f;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect|Pickup")
     TObjectPtr<UNiagaraSystem> PickupVfx = nullptr;
 
-protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
-
 private:
-    // 아이템을 줍는 연출용 타이머의 실행 간격
-    //const float TimerInterval = 0.02f;
-
-    //FTimerHandle PickupEffectTimerHandle;
-    //TWeakObjectPtr<AActor> TargetActor = nullptr;
-    //float PickupElapsedTime = 0.0f;
-    //FVector PickupStartLocation;
-
     TWeakObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
 
 };

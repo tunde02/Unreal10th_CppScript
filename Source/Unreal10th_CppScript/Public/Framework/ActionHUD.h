@@ -6,6 +6,8 @@
 #include "GameFramework/HUD.h"
 #include "ActionHUD.generated.h"
 
+class UMainHudWidget;
+
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionHUD : public AHUD
 {
@@ -13,15 +15,15 @@ class UNREAL10TH_CPPSCRIPT_API AActionHUD : public AHUD
 
 public:
     UFUNCTION(BlueprintCallable)
-    UUserWidget* GetMainHudWidget() const;
+    UMainHudWidget* GetMainHudWidget() const;
 
 protected:
     virtual void BeginPlay() override;
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    TSubclassOf<UUserWidget> MainHudWidgetClass = nullptr;
+    TSubclassOf<UMainHudWidget> MainHudWidgetClass = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    TObjectPtr<UUserWidget> MainHudWidgetInstance = nullptr;
+    TObjectPtr<UMainHudWidget> MainHudWidgetInstance = nullptr;
 };
