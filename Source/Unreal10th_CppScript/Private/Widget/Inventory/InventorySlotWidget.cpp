@@ -10,7 +10,19 @@
 
 FReply UInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-    FReply Reply = Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+    {
+        // 중요: 드래그 감지 예약을 걸어둡니다. 
+        // 유저가 움직이면 DragDetected로 가고, 안 움직이고 떼면 MouseButtonUp으로 갑니다.
+        return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+    }
+
+    return FReply::Unhandled();
+}
+
+FReply UInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    FReply Reply = Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
 
     if (!TargetInventory.IsValid())
     {
@@ -29,7 +41,6 @@ FReply UInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry
     else if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
     {
         FInventoryCommandResult Result;
-
         TargetInventory->ExecuteCommand(
             FInventoryCommand::MakeDropCommand(Index, GetOwningPlayerPawn()->GetActorLocation()),
             Result
@@ -89,4 +100,45 @@ void UInventorySlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
     TargetInventory->OnSlotHovered.ExecuteIfBound(nullptr);
 
     Super::NativeOnMouseLeave(InMouseEvent);
+}
+
+void UInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
+{
+    if (!TargetInventory.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : InventoryComponent nullptr"));
+        return;
+    }
+
+    if (!Slot || Slot->IsEmpty())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : Drag - 빈 슬롯 드래그 시도"));
+        return;
+    }
+
+    FInventoryCommandResult Result;
+    TargetInventory->ExecuteCommand(
+        FInventoryCommand::MakeMoveCommand(Index, TargetInventory->GetSize()),
+        Result
+    );
+}
+
+bool UInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    if (!TargetInventory.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : InventoryComponent nullptr"));
+        return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+    }
+
+
+
+
+    return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+}
+
+void UInventorySlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+
+    Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
 }
