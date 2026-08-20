@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,12 +6,23 @@
 #include "Blueprint/UserWidget.h"
 #include "TemporarySlotWidget.generated.h"
 
-/**
- * 
- */
+class UImage;
+class UTextBlock;
+struct FInvenSlot;
+
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UTemporarySlotWidget : public UUserWidget
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
+
+public:
+    void InitializeSlot(const FInvenSlot* InSlot);
+
+protected:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
+    TObjectPtr<UImage> IconImage = nullptr;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))
+    TObjectPtr<UTextBlock> CountText = nullptr;
+
 };

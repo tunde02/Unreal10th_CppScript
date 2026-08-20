@@ -4,13 +4,14 @@
 #include "Widget/Inventory/InventorySlotWidget.h"
 #include "Widget/Inventory/InventoryDragDropOperation.h"
 #include "Widget/Inventory/TemporarySlotWidget.h"
+#include "Widget/Inventory/InventoryWidget.h"
 #include "Component/InventoryComponent.h"
 
 #include "Components/Image.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
 
-void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex)
+void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex, UInventoryWidget* InInventoryWidget)
 {
     if (!InInventoryComponent)
     {
@@ -19,6 +20,7 @@ void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryCompon
 
     TargetInventory = InInventoryComponent;
     Index = InSlotIndex;
+    ParentWidget = InInventoryWidget;
 
     RefreshSlot();
 }
@@ -67,6 +69,63 @@ void UInventorySlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
     Super::NativeOnMouseLeave(InMouseEvent);
 }
 
+FReply UInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    /*
+    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+    {
+        // 중요: 드래그 감지 예약을 걸어둡니다.
+        // 유저가 움직이면 DragDetected로 가고, 안 움직이고 떼면 MouseButtonUp으로 갑니다.
+        return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+    }
+
+    return FReply::Unhandled();
+    */
+
+    if (InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
+    {
+        if (FInvenSlot* InvenSlot = TargetInventory->GetSlot(Index))
+        {
+            if (!InvenSlot->IsEmpty())
+            {
+                return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+            }
+        }
+    }
+
+    return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+FReply UInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    FReply Reply = Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+
+    if (!TargetInventory.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : InventoryComponent nullptr"));
+        return Reply;
+    }
+
+    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+    {
+        FInventoryCommandResult Result;
+        TargetInventory->ExecuteCommand(
+            FInventoryCommand::MakeUseCommand(Index),
+            Result
+        );
+    }
+    else if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+    {
+        FInventoryCommandResult Result;
+        TargetInventory->ExecuteCommand(
+            FInventoryCommand::MakeDropCommand(Index, GetOwningPlayerPawn()->GetActorLocation()),
+            Result
+        );
+    }
+
+    return Reply;
+}
+
 void UInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
 {
     if (!TargetInventory.IsValid())
@@ -75,35 +134,63 @@ void UInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, con
         return;
     }
 
-    if (!Slot || Slot->IsEmpty())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : Drag - 빈 슬롯 드래그 시도"));
-        return;
-    }
+    UInventoryDragDropOperation* DragOp = NewObject<UInventoryDragDropOperation>();
+    DragOp->ItemData = TargetInventory->GetSlot(Index)->ItemData;
+    DragOp->SourceIndex = Index;
+
+    UTemporarySlotWidget* DragTempWidget = CreateWidget<UTemporarySlotWidget>(
+        this,
+        TargetInventory->GetTemporarySlotWidgetClass()
+    );
+    DragTempWidget->InitializeSlot(TargetInventory->GetSlot(Index));
+    DragOp->DefaultDragVisual = DragTempWidget; // 얘 전용 레이어가 따로 생겼다가 드래그가 끝나면 사라짐. 따라서 AddToViewport 안해줘도 됨
+
+    OutOperation = DragOp; // NativeOnDrop과 NariveOnDragCancelled를 발동시키기 위해 필수
 
     FInventoryCommandResult Result;
     TargetInventory->ExecuteCommand(
-        FInventoryCommand::MakeMoveCommand(Index, TargetInventory->GetSize()),
-        Result
-    );
+        FInventoryCommand::MakeMoveCommand(Index, TargetInventory->GetTempSlotIndex()),
+        Result);
 }
 
 bool UInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-    if (!TargetInventory.IsValid())
+    // false 리턴하면 OnDragCancelled 실행해버림
+    if (!TargetInventory.IsValid() || TargetInventory->GetTempSlot()->IsEmpty())
     {
-        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : InventoryComponent nullptr"));
+        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : InventoryComponent nullptr OR TemporarySlot Empty"));
         return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
     }
 
-
-
+    UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
+    FInventoryCommandResult Result;
+    TargetInventory->ExecuteCommand(
+        FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), Index),
+        Result);
+    TargetInventory->ExecuteCommand(
+        FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), DragOp->SourceIndex),
+        Result);
 
     return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 }
 
 void UInventorySlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
+    if (ParentWidget->IsHovered())
+    {
+        UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
+        FInventoryCommandResult Result;
+        TargetInventory->ExecuteCommand(
+            FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), DragOp->SourceIndex),
+            Result);
+    }
+    else
+    {
+        FInventoryCommandResult Result;
+        TargetInventory->ExecuteCommand(
+            FInventoryCommand::MakeDropCommand(TargetInventory->GetTempSlotIndex(), GetOwningPlayerPawn()->GetActorLocation()),
+            Result);
+    }
 
     Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
 }

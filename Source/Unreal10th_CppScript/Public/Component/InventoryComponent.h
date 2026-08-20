@@ -9,6 +9,7 @@
 #include "InventoryComponent.generated.h"
 
 class UItemDataAsset;
+class UTemporarySlotWidget;
 
 USTRUCT(BlueprintType)
 struct FInvenSlot
@@ -48,8 +49,6 @@ public:
 
 DECLARE_DELEGATE_OneParam(FOnSlotChanged, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnMoneyChanged, int32);
-DECLARE_DELEGATE(FOnInventoryAction);
-DECLARE_DELEGATE_OneParam(FOnSlotHovered, const FInvenSlot* InSlot);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class UNREAL10TH_CPPSCRIPT_API UInventoryComponent : public UActorComponent
@@ -63,15 +62,17 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Command")
     bool ExecuteCommand(const FInventoryCommand& Command, FInventoryCommandResult& OutResult);
 
-    void BrodcastOnInventoryAction() const;
-
     /* Getter **************************************************/
-    int32 GetMoney() const { return Money; }
+    inline int32 GetMoney() const { return Money; }
     FInvenSlot* GetSlot(int InSlotIndex);
-    int32 GetSize() const { return InventorySize; }
+    inline int32 GetSize() const { return InventorySize; }
+    inline int32 GetTempSlotIndex() const { return InventorySize; }
 
     // 임시 슬롯을 반환하는 함수 (드래그앤 드롭에 사용)
     FInvenSlot* GetTempSlot();
+
+    // 임시 슬롯의 위젯 클래스를 반환하는 함수
+    inline TSubclassOf<UTemporarySlotWidget> GetTemporarySlotWidgetClass() const { return TemporarySlotWidgetClass; }
     /***********************************************************/
 
 protected:
@@ -86,7 +87,7 @@ protected:
     void UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount);
     void ClearSlot(int32 InSlotIndex);
 
-    inline bool IsValidIndex(int32 InSlotIndex) const { return 0 <= InSlotIndex && InSlotIndex < InventorySize; }
+    inline bool IsValidIndex(int32 InSlotIndex) const { return 0 <= InSlotIndex && InSlotIndex <= InventorySize; }
 
     bool HandleAddCommand(const UItemDataAsset* InItemData, int32 InCount, FInventoryCommandResult& OutResult);
     bool HandleMoveCommand(int32 InSourceIndex, int32 InTargetIndex, FInventoryCommandResult& OutResult);
@@ -107,8 +108,6 @@ private:
 public:
     FOnSlotChanged OnSlotChanged;
     FOnMoneyChanged OnMoneyChanged;
-    FOnInventoryAction OnInventoryAction;
-    FOnSlotHovered OnSlotHovered;
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Money")
@@ -116,6 +115,9 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Slot")
     TArray<FInvenSlot> Slots;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Slot")
+    TSubclassOf<UTemporarySlotWidget> TemporarySlotWidgetClass;
 
 private:
     static constexpr int32 InventorySize = 10;

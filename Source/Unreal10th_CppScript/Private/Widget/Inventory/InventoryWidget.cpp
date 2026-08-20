@@ -39,7 +39,7 @@ void UInventoryWidget::InitializeInventoryWidget(UInventoryComponent* InInventor
         {
             if (UInventorySlotWidget* SlotWidget = Cast<UInventorySlotWidget>(SlotGridPanel->GetChildAt(i)))
             {
-                SlotWidget->InitializeSlot(TargetInventory.Get(), i);
+                SlotWidget->InitializeSlot(TargetInventory.Get(), i, this);
 
                 SlotWidget->OnSlotEnter.AddWeakLambda(
                     this,

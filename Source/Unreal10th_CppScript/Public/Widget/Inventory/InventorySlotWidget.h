@@ -10,7 +10,7 @@ class UImage;
 class UHorizontalBox;
 class UTextBlock;
 class UInventoryComponent;
-struct FInvenSlot;
+class UInventoryWidget;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnSlotEnter, int32);
 DECLARE_MULTICAST_DELEGATE(FOnSlotLeave);
@@ -21,15 +21,15 @@ class UNREAL10TH_CPPSCRIPT_API UInventorySlotWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
-    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-    virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-
-    void InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex);
+    void InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex, UInventoryWidget* InInventoryWidget);
     void RefreshSlot() const;
 
 protected:
     virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
+
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
     virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
     virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
@@ -55,9 +55,10 @@ private:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     TWeakObjectPtr<UInventoryComponent> TargetInventory = nullptr;
 
+    TWeakObjectPtr<UInventoryWidget> ParentWidget = nullptr;
+
     static constexpr int32 InvalidIndex = -1;
 
     int32 Index = InvalidIndex;
 
-    const FInvenSlot* Slot = nullptr;
 };
