@@ -7,34 +7,69 @@
 
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 
-void UItemDetailPanelWidget::RefreshDetailPanel(const FInvenSlot* InSlot)
+void UItemDetailPanelWidget::Open(const UItemDataAsset* InItemData)
 {
-    if (InSlot && !InSlot->IsEmpty())
+    if (!InItemData)
     {
-        IconImage->SetBrushFromTexture(InSlot->ItemData->Icon.Get());
-        IconImage->SetBrushTintColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-        DisplayNameText->SetText(InSlot->ItemData->DisplayName);
-        PriceText->SetText(FText::AsNumber(InSlot->ItemData->Price));
-        DescriptionText->SetText(InSlot->ItemData->Description);
+        return;
+    }
 
-        SetVisibility(ESlateVisibility::Visible);
-    }
-    else
-    {
-        SetVisibility(ESlateVisibility::Collapsed);
-    }
+    IconImage->SetBrushFromTexture(InItemData->Icon.Get());
+    DisplayNameText->SetText(InItemData->DisplayName);
+    PriceText->SetText(FText::AsNumber(InItemData->Price));
+    DescriptionText->SetText(InItemData->Description);
+
+    SetVisibility(ESlateVisibility::HitTestInvisible);
+
+    bTickEnabled = true;
+}
+
+void UItemDetailPanelWidget::Close()
+{
+    SetVisibility(ESlateVisibility::Collapsed);
+    bTickEnabled = false;
 }
 
 void UItemDetailPanelWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    if (IInventoryUserInterface* InventoryUser = Cast<IInventoryUserInterface>(GetOwningPlayerPawn()))
+    CanvasSlot = Cast<UCanvasPanelSlot>(Slot);
+
+    Close();
+}
+
+void UItemDetailPanelWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    if (!bTickEnabled)
     {
-        if (UInventoryComponent* InventoryComponent = InventoryUser->GetInventoryComponent())
+        return;
+    }
+
+    UpdateLocation();
+}
+
+void UItemDetailPanelWidget::UpdateLocation()
+{
+    if (!CanvasSlot.IsValid())
+    {
+        CanvasSlot = Cast<UCanvasPanelSlot>(Slot);
+    }
+
+    if (CanvasSlot.IsValid())
+    {
+        const FVector2D MouseAbsolute = UWidgetLayoutLibrary::GetMousePositionOnPlatform();
+        if (UPanelWidget* ParentPanel = GetParent())
         {
-            InventoryComponent->OnSlotHovered.BindUObject(this, &UItemDetailPanelWidget::RefreshDetailPanel);
+            const FGeometry& ParentGeometry = ParentPanel->GetTickSpaceGeometry();
+            const FVector2D LocalPos = ParentGeometry.AbsoluteToLocal(MouseAbsolute);
+            CanvasSlot->SetPosition(LocalPos);
         }
     }
 }

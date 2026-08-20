@@ -12,6 +12,9 @@ class UTextBlock;
 class UInventoryComponent;
 struct FInvenSlot;
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnSlotEnter, int32);
+DECLARE_MULTICAST_DELEGATE(FOnSlotLeave);
+
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UInventorySlotWidget : public UUserWidget
 {
@@ -30,6 +33,10 @@ protected:
     virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
     virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
     virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
+public:
+    FOnSlotEnter OnSlotEnter;
+    FOnSlotLeave OnSlotLeave;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))

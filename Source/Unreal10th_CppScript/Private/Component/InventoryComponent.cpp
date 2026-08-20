@@ -42,11 +42,6 @@ bool UInventoryComponent::ExecuteCommand(const FInventoryCommand& Command, FInve
     return OutResult.bSuccess;
 }
 
-void UInventoryComponent::BrodcastOnInventoryAction() const
-{
-    OnInventoryAction.ExecuteIfBound();
-}
-
 FInvenSlot* UInventoryComponent::GetSlot(int InSlotIndex)
 {
     check(IsValidIndex(InSlotIndex));
@@ -318,7 +313,7 @@ bool UInventoryComponent::HandleDropCommand(int32 InSlotIndex, const FVector& In
 
     if (World && ItemData)
     {
-        if (UPickupFactorySubsystem* Factory = World->GetSubsystem< UPickupFactorySubsystem>())
+        if (UPickupFactorySubsystem* Factory = World->GetSubsystem<UPickupFactorySubsystem>())
         {
             for (int32 _ = 0; _ < Slot.GetCount(); _++)
             {
@@ -331,7 +326,6 @@ bool UInventoryComponent::HandleDropCommand(int32 InSlotIndex, const FVector& In
         }
 
         ClearSlot(InSlotIndex);
-        //Slot.Clear();
 
         OutResult.bSuccess = true;
     }

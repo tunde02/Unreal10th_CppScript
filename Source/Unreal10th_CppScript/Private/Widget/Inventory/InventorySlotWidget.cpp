@@ -2,53 +2,13 @@
 
 
 #include "Widget/Inventory/InventorySlotWidget.h"
+#include "Widget/Inventory/InventoryDragDropOperation.h"
+#include "Widget/Inventory/TemporarySlotWidget.h"
 #include "Component/InventoryComponent.h"
 
 #include "Components/Image.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
-
-FReply UInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
-    {
-        // 중요: 드래그 감지 예약을 걸어둡니다. 
-        // 유저가 움직이면 DragDetected로 가고, 안 움직이고 떼면 MouseButtonUp으로 갑니다.
-        return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
-    }
-
-    return FReply::Unhandled();
-}
-
-FReply UInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-    FReply Reply = Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
-
-    if (!TargetInventory.IsValid())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventorySlotWidget] : InventoryComponent nullptr"));
-        return Reply;
-    }
-
-    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
-    {
-        FInventoryCommandResult Result;
-        TargetInventory->ExecuteCommand(
-            FInventoryCommand::MakeUseCommand(Index),
-            Result
-        );
-    }
-    else if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
-    {
-        FInventoryCommandResult Result;
-        TargetInventory->ExecuteCommand(
-            FInventoryCommand::MakeDropCommand(Index, GetOwningPlayerPawn()->GetActorLocation()),
-            Result
-        );
-    }
-
-    return Reply;
-}
 
 void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex)
 {
@@ -59,20 +19,25 @@ void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryCompon
 
     TargetInventory = InInventoryComponent;
     Index = InSlotIndex;
-    Slot = TargetInventory->GetSlot(Index);
 
     RefreshSlot();
 }
 
 void UInventorySlotWidget::RefreshSlot() const
 {
-    if (!Slot)
+    if (!TargetInventory.IsValid())
+    {
+        return;
+    }
+
+    const FInvenSlot* TargetSlot = TargetInventory->GetSlot(Index);
+    if (!TargetSlot)
     {
         UE_LOG(LogTemp, Warning, TEXT("[Slot %d]가 유효하지 않습니다."), Index);
         return;
     }
 
-    if (Slot->IsEmpty())
+    if (TargetSlot->IsEmpty())
     {
         IconImage->SetBrushFromTexture(nullptr);
         IconImage->SetBrushTintColor(FLinearColor::Transparent);
@@ -80,10 +45,10 @@ void UInventorySlotWidget::RefreshSlot() const
     }
     else
     {
-        IconImage->SetBrushFromTexture(Slot->ItemData->Icon.Get());
+        IconImage->SetBrushFromTexture(TargetSlot->ItemData->Icon.Get());
         IconImage->SetBrushTintColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-        CountText->SetText(FText::AsNumber(Slot->GetCount()));
-        MaxStackText->SetText(FText::AsNumber(Slot->ItemData->MaxStackCount));
+        CountText->SetText(FText::AsNumber(TargetSlot->GetCount()));
+        MaxStackText->SetText(FText::AsNumber(TargetSlot->ItemData->MaxStackCount));
         CountBox->SetVisibility(ESlateVisibility::HitTestInvisible);
     }
 }
@@ -92,12 +57,12 @@ void UInventorySlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const
 {
     Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
 
-    TargetInventory->OnSlotHovered.ExecuteIfBound(Slot);
+    OnSlotEnter.Broadcast(Index);
 }
 
 void UInventorySlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
-    TargetInventory->OnSlotHovered.ExecuteIfBound(nullptr);
+    OnSlotLeave.Broadcast();
 
     Super::NativeOnMouseLeave(InMouseEvent);
 }

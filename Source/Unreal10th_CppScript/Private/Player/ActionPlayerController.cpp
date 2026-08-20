@@ -3,10 +3,30 @@
 
 #include "Player/ActionPlayerController.h"
 
+#include "Blueprint/UserWidget.h"
+
 // 입력 받기 위해 추가한 헤더
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "InputMappingContext.h"
+
+void AActionPlayerController::OnInventoryOpenClose(bool bInventoryOpen, UUserWidget* InFocusWidget)
+{
+    if (bInventoryOpen)
+    {
+        FInputModeUIOnly InputModeUI;
+        InputModeUI.SetWidgetToFocus(InFocusWidget->TakeWidget());
+
+        SetInputMode(InputModeUI);
+        SetShowMouseCursor(true);
+    }
+    else
+    {
+        FInputModeGameOnly InputModeGame;
+        SetInputMode(InputModeGame);
+        SetShowMouseCursor(false);
+    }
+}
 
 void AActionPlayerController::BeginPlay()
 {

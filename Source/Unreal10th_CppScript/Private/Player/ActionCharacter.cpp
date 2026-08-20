@@ -10,6 +10,7 @@
 #include "AnimNotify/AnimNotifyState_SectionJump.h"
 #include "Data/Item/WeaponDataAsset.h"
 #include "Weapon/WeaponActor.h"
+#include "Framework/ActionHUD.h"
 
 #include "EnhancedInputComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -101,6 +102,11 @@ void AActionCharacter::BeginPlay()
             StaminaAutoRecoveryInterval,
             StaminaAutoRecoveryAmountPerTick);
         StatComponent->Initialize(Data);
+    }
+
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
+    {
+        HUD = Cast<AActionHUD>(PC->GetHUD());
     }
 }
 
@@ -233,9 +239,17 @@ void AActionCharacter::OnSprintEnd()
 
 void AActionCharacter::OnInventoryAction(const FInputActionValue& InValue)
 {
-    if (GetInventoryComponent())
+    if (!HUD.IsValid())
     {
-        GetInventoryComponent()->BrodcastOnInventoryAction();
+        if (APlayerController* PC = Cast<APlayerController>(GetController()))
+        {
+            HUD = Cast<AActionHUD>(PC->GetHUD());
+        }
+    }
+
+    if (HUD.IsValid())
+    {
+        HUD->ToggleInventory();
     }
 }
 

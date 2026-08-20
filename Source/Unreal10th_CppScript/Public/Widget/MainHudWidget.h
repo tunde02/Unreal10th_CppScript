@@ -19,14 +19,14 @@ public:
     UFUNCTION(BlueprintCallable)
     void TestInventoryRefresh() const;
 
+    UFUNCTION(BlueprintCallable)
+    void ToggleInventory() const;
+
 protected:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UPlayerStatBarsWidget> PlayerStatBars;
 
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UInventoryWidget> Inventory;
-
-    UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
-    TObjectPtr<UItemDetailPanelWidget> ItemDetailPanel;
 
 };

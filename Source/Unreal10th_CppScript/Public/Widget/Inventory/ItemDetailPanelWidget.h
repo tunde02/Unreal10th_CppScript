@@ -8,7 +8,8 @@
 
 class UImage;
 class UTextBlock;
-struct FInvenSlot;
+class UItemDataAsset;
+class UCanvasPanelSlot;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UItemDetailPanelWidget : public UUserWidget
@@ -16,10 +17,15 @@ class UNREAL10TH_CPPSCRIPT_API UItemDetailPanelWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
-    void RefreshDetailPanel(const FInvenSlot* InSlot);
+    void Open(const UItemDataAsset* InItemData);
+    void Close();
 
 protected:
     virtual void NativeConstruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+private:
+    void UpdateLocation();
 
 protected:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
@@ -33,5 +39,10 @@ protected:
 
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UTextBlock> DescriptionText = nullptr;
+
+private:
+    bool bTickEnabled = false;
+    TWeakObjectPtr<UCanvasPanelSlot> CanvasSlot;
+    FVector2D ParentPosition;
 
 };

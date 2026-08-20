@@ -20,6 +20,7 @@ class UWeaponComponent;
 class UInventoryComponent;
 class UAnimNotifyState_SectionJump;
 class UAnimMontage;
+class AActionHUD;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public IStatInterface, public IWeaponUserInterface, public IInventoryUserInterface
@@ -133,5 +134,7 @@ private:
     TObjectPtr<UAnimInstance> AnimInstance = nullptr;
 
     bool bSprintMode = false;
+
+    TWeakObjectPtr<AActionHUD> HUD = nullptr;
 
 };

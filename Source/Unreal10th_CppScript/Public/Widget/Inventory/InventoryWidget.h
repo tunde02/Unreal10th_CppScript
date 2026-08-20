@@ -11,7 +11,7 @@ class UUniformGridPanel;
 class UMoneyPanelWidget;
 class UInventoryComponent;
 class UInventorySlotWidget;
-struct FInvenSlot;
+class UItemDetailPanelWidget;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API UInventoryWidget : public UUserWidget
@@ -26,6 +26,9 @@ public:
     void ClearInventoryWidget();
     void OpenInventoryWidget();
     void CloseInventoryWidget();
+    void ToggleInventoryWidget();
+
+    bool IsInventoryOpen() const { return GetVisibility() == ESlateVisibility::Visible; }
 
 #if WITH_EDITOR
     void TestRefresh();
@@ -33,6 +36,7 @@ public:
 
 protected:
     virtual void NativeConstruct() override;
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
     void RefreshInventoryWidget() const;
     void RefreshSlotWidget(int32 InSlotIndex) const;
@@ -44,9 +48,6 @@ private:
 
     inline bool IsValidIndex(int32 InIndex) const { return 0 <= InIndex && InIndex < SlotSize; }
 
-private:
-    void ToggleInventoryWidget();
-
 protected:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UButton> CloseButton;
@@ -57,6 +58,9 @@ protected:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UUniformGridPanel> SlotGridPanel;
 
+    UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (BindWidget))
+    TObjectPtr<UItemDetailPanelWidget> ItemDetailPanel;
+
 private:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     TWeakObjectPtr<UInventoryComponent> TargetInventory = nullptr;
@@ -65,7 +69,5 @@ private:
     TArray<TObjectPtr<UInventorySlotWidget>> SlotWidgets;
 
     int32 SlotSize = 0;
-
-    bool bOpen = false;
 
 };

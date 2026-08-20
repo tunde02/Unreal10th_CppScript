@@ -4,11 +4,14 @@
 #include "Widget/Inventory/InventoryWidget.h"
 #include "Widget/Inventory/InventorySlotWidget.h"
 #include "Widget/Inventory/MoneyPanelWidget.h"
+#include "Widget/Inventory/ItemDetailPanelWidget.h"
 #include "Interface/InventoryUserInterface.h"
 #include "Component/InventoryComponent.h"
+#include "Player/ActionPlayerController.h"
 
 #include "Components/Button.h"
 #include "Components/UniformGridPanel.h"
+#include "Components/CanvasPanelSlot.h"
 
 void UInventoryWidget::InitializeInventoryWidget(UInventoryComponent* InInventoryComponent)
 {
@@ -24,7 +27,6 @@ void UInventoryWidget::InitializeInventoryWidget(UInventoryComponent* InInventor
 
     TargetInventory->OnSlotChanged.BindUObject(this, &UInventoryWidget::RefreshSlotWidget);
     TargetInventory->OnMoneyChanged.AddUObject(this, &UInventoryWidget::RefreshMoneyPanel);
-    TargetInventory->OnInventoryAction.BindUObject(this, &UInventoryWidget::ToggleInventoryWidget);
 
     if (SlotGridPanel)
     {
@@ -38,12 +40,31 @@ void UInventoryWidget::InitializeInventoryWidget(UInventoryComponent* InInventor
             if (UInventorySlotWidget* SlotWidget = Cast<UInventorySlotWidget>(SlotGridPanel->GetChildAt(i)))
             {
                 SlotWidget->InitializeSlot(TargetInventory.Get(), i);
+
+                SlotWidget->OnSlotEnter.AddWeakLambda(
+                    this,
+                    [this](int InIndex) {
+                        if (TargetInventory.IsValid())
+                        {
+                            ItemDetailPanel->Open(TargetInventory->GetSlot(InIndex)->ItemData);
+                        }
+                    }
+                );
+                SlotWidget->OnSlotLeave.AddWeakLambda(
+                    this,
+                    [this]() {
+                        ItemDetailPanel->Close();
+                    }
+                );
+
                 SlotWidgets.Add(SlotWidget);
             }
         }
     }
 
     RefreshInventoryWidget();
+
+    CloseInventoryWidget();
 }
 
 void UInventoryWidget::ClearInventoryWidget()
@@ -51,21 +72,44 @@ void UInventoryWidget::ClearInventoryWidget()
     if (TargetInventory.IsValid())
     {
         TargetInventory->OnSlotChanged.Unbind();
-        TargetInventory->OnMoneyChanged.Clear();
+        TargetInventory->OnMoneyChanged.RemoveAll(this);
         TargetInventory = nullptr;
     }
 
+    SlotWidgets.Empty();
     SlotSize = 0;
 }
 
 void UInventoryWidget::OpenInventoryWidget()
 {
     SetVisibility(ESlateVisibility::Visible);
+
+    if (AActionPlayerController* PC = Cast<AActionPlayerController>(GetOwningPlayer()))
+    {
+        PC->OnInventoryOpenClose(true, this);
+    }
 }
 
 void UInventoryWidget::CloseInventoryWidget()
 {
     SetVisibility(ESlateVisibility::Collapsed);
+
+    if (AActionPlayerController* PC = Cast<AActionPlayerController>(GetOwningPlayer()))
+    {
+        PC->OnInventoryOpenClose(false, this);
+    }
+}
+
+void UInventoryWidget::ToggleInventoryWidget()
+{
+    if (IsInventoryOpen())
+    {
+        CloseInventoryWidget();
+    }
+    else
+    {
+        OpenInventoryWidget();
+    }
 }
 
 void UInventoryWidget::TestRefresh()
@@ -76,6 +120,8 @@ void UInventoryWidget::TestRefresh()
 void UInventoryWidget::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    SetIsFocusable(true);
 
     if (CloseButton)
     {
@@ -89,6 +135,22 @@ void UInventoryWidget::NativeConstruct()
             InitializeInventoryWidget(InventoryComponent);
         }
     }
+
+    CloseInventoryWidget();
+}
+
+FReply UInventoryWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    if (InKeyEvent.GetKey() == EKeys::I)
+    {
+        CloseInventoryWidget();
+
+        // 이 입력에 대한 처리가 끝났다고 알림
+        return FReply::Handled();
+    }
+
+    // 내가 처리하지 않은 입력은 부모에서 처리
+    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UInventoryWidget::RefreshInventoryWidget() const
@@ -132,17 +194,4 @@ void UInventoryWidget::RefreshMoneyPanel(int32 InCurrentMoney) const
 void UInventoryWidget::OnClickedCloseButton()
 {
     CloseInventoryWidget();
-}
-
-void UInventoryWidget::ToggleInventoryWidget()
-{
-    bOpen = !bOpen;
-    if (bOpen)
-    {
-        OpenInventoryWidget();
-    }
-    else
-    {
-        CloseInventoryWidget();
-    }
 }

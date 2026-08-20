@@ -10,6 +10,14 @@ UMainHudWidget* AActionHUD::GetMainHudWidget() const
     return MainHudWidgetInstance;
 }
 
+void AActionHUD::ToggleInventory()
+{
+    if (MainHudWidgetInstance)
+    {
+        MainHudWidgetInstance->ToggleInventory();
+    }
+}
+
 void AActionHUD::BeginPlay()
 {
     Super::BeginPlay();

@@ -19,7 +19,7 @@ APickupBase::APickupBase()
     SphereCollision = CreateDefaultSubobject<USphereComponent>(TEXT("RootCollision"));
     SphereCollision->InitSphereRadius(100.0f);
     SphereCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
-    //SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
+    SphereCollision->SetCollisionResponseToChannel(ECC_Player, ECR_Overlap);
     SetRootComponent(SphereCollision);
 
     NiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("VFX"));
@@ -47,14 +47,11 @@ void APickupBase::BeginPlay()
     NiagaraComponent->SetRelativeLocation(MeshZOffset);
 
     FTimerHandle PickupDelayHandle;
-    GetWorldTimerManager().SetTimer(
+    GetWorld()->GetTimerManager().SetTimer(
         PickupDelayHandle,
-        FTimerDelegate::CreateWeakLambda(
-            this,
-            [this]() {
-                OnActorBeginOverlap.AddDynamic(this, &APickupBase::OnBeginOverlap);
-            }
-        ),
+        [this]() {
+            OnActorBeginOverlap.AddDynamic(this, &APickupBase::OnBeginOverlap);
+        },
         PickupDelayTime,
         false
     );

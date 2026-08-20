@@ -9,11 +9,15 @@
 
 class UInputMappingContext;
 class UInputAction;
+class UUserWidget;
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AActionPlayerController : public APlayerController
 {
     GENERATED_BODY()
+
+public:
+    void OnInventoryOpenClose(bool bInventoryOpen, UUserWidget* InFocusWidget);
 
 protected:
     virtual void BeginPlay() override;
