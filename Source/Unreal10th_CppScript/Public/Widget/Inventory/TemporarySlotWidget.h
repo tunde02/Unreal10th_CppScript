@@ -17,6 +17,7 @@ class UNREAL10TH_CPPSCRIPT_API UTemporarySlotWidget : public UUserWidget
 
 public:
     void InitializeSlot(const FInvenSlot* InSlot);
+    void SetVisual(UTexture2D* InIcon, int32 InCount);
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (BindWidget))

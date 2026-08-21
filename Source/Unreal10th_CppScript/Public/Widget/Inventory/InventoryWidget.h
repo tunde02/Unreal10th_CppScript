@@ -37,6 +37,7 @@ public:
 protected:
     virtual void NativeConstruct() override;
     virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+    virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
     void RefreshInventoryWidget() const;
     void RefreshSlotWidget(int32 InSlotIndex) const;

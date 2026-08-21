@@ -22,18 +22,11 @@ public:
 
 protected:
     virtual void BeginPlay() override;
-    //virtual void OnFinishPickupEffect() override;
     virtual UMeshComponent* GetMesh() const override;
-
-private:
-    //bool IsPickupEffectAssetReady() const;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TObjectPtr<USkeletalMeshComponent> Mesh = nullptr;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect|Pickup")
-    TObjectPtr<UNiagaraSystem> PickupVfx = nullptr;
 
 private:
     TWeakObjectPtr<UWeaponDataAsset> WeaponData = nullptr;

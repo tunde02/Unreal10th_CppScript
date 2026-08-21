@@ -10,8 +10,9 @@
 #include "Components/Image.h"
 #include "Components/HorizontalBox.h"
 #include "Components/TextBlock.h"
+#include "Blueprint/SlateBlueprintLibrary.h"
 
-void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex, UInventoryWidget* InInventoryWidget)
+void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex)
 {
     if (!InInventoryComponent)
     {
@@ -20,7 +21,6 @@ void UInventorySlotWidget::InitializeSlot(UInventoryComponent* InInventoryCompon
 
     TargetInventory = InInventoryComponent;
     Index = InSlotIndex;
-    ParentWidget = InInventoryWidget;
 
     RefreshSlot();
 }
@@ -106,19 +106,11 @@ FReply UInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, 
         return Reply;
     }
 
-    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+    if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
     {
         FInventoryCommandResult Result;
         TargetInventory->ExecuteCommand(
             FInventoryCommand::MakeUseCommand(Index),
-            Result
-        );
-    }
-    else if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
-    {
-        FInventoryCommandResult Result;
-        TargetInventory->ExecuteCommand(
-            FInventoryCommand::MakeDropCommand(Index, GetOwningPlayerPawn()->GetActorLocation()),
             Result
         );
     }
@@ -134,8 +126,13 @@ void UInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, con
         return;
     }
 
+    FInvenSlot* InvenSlot = TargetInventory->GetSlot(Index);
+    if (!InvenSlot || InvenSlot->IsEmpty())
+    {
+        return;
+    }
+
     UInventoryDragDropOperation* DragOp = NewObject<UInventoryDragDropOperation>();
-    DragOp->ItemData = TargetInventory->GetSlot(Index)->ItemData;
     DragOp->SourceIndex = Index;
 
     UTemporarySlotWidget* DragTempWidget = CreateWidget<UTemporarySlotWidget>(
@@ -143,6 +140,8 @@ void UInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, con
         TargetInventory->GetTemporarySlotWidgetClass()
     );
     DragTempWidget->InitializeSlot(TargetInventory->GetSlot(Index));
+    DragTempWidget->SetVisual(InvenSlot->ItemData->Icon.Get(), InvenSlot->GetCount());
+
     DragOp->DefaultDragVisual = DragTempWidget; // 얘 전용 레이어가 따로 생겼다가 드래그가 끝나면 사라짐. 따라서 AddToViewport 안해줘도 됨
 
     OutOperation = DragOp; // NativeOnDrop과 NariveOnDragCancelled를 발동시키기 위해 필수
@@ -162,34 +161,72 @@ bool UInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDrag
         return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
     }
 
-    UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
     FInventoryCommandResult Result;
     TargetInventory->ExecuteCommand(
         FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), Index),
         Result);
+
+    UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
     TargetInventory->ExecuteCommand(
         FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), DragOp->SourceIndex),
         Result);
 
-    return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+    return true;
 }
 
 void UInventorySlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-    if (ParentWidget->IsHovered())
+    /*
+    FInventoryCommandResult Result;
+    TargetInventory->ExecuteCommand(
+        FInventoryCommand::MakeDropCommand(TargetInventory->GetTempSlotIndex(), GetOwningPlayerPawn()->GetActorLocation()),
+        Result);
+    */
+
+    if (APlayerController* PC = GetOwningPlayer())
     {
-        UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
-        FInventoryCommandResult Result;
-        TargetInventory->ExecuteCommand(
-            FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), DragOp->SourceIndex),
-            Result);
-    }
-    else
-    {
-        FInventoryCommandResult Result;
-        TargetInventory->ExecuteCommand(
-            FInventoryCommand::MakeDropCommand(TargetInventory->GetTempSlotIndex(), GetOwningPlayerPawn()->GetActorLocation()),
-            Result);
+        UE_LOG(LogTemp, Log, TEXT("플레이어 컨트롤러 확인"));
+        //FHitResult HitResult;
+        //if (PC->GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, HitResult))
+        //{
+        //	UE_LOG(LogTemp, Log, TEXT("바닥 히트 성공"));
+
+        //	FInventoryCommandResult Result;
+        //	TargetInventory->ExecuteCommand(
+        //		FInventoryCommand::MakeDrop(TargetInventory->GetTempSlotIndex(), HitResult.Location), 
+        //		Result);
+        //}
+
+        FVector2D AbsolutePosition = InDragDropEvent.GetScreenSpacePosition();
+        FVector2D PixelPosion;
+        FVector2D ViewportPosition;
+        USlateBlueprintLibrary::AbsoluteToViewport(this, AbsolutePosition, PixelPosion, ViewportPosition);
+
+        FVector WorldLocation;
+        FVector WorldDirection;
+        if (PC->DeprojectScreenPositionToWorld(
+            PixelPosion.X, PixelPosion.Y,
+            WorldLocation, WorldDirection))
+        {
+            FVector Start = WorldLocation;
+            FVector End = Start + WorldDirection * 10000.0f;
+
+            FHitResult HitResult;
+            FVector SpawnLocation;
+            if (GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECollisionChannel::ECC_Visibility))
+            {
+                SpawnLocation = HitResult.Location;
+            }
+            else
+            {
+                SpawnLocation = End;
+            }
+
+            FInventoryCommandResult Result;
+            TargetInventory->ExecuteCommand(
+                FInventoryCommand::MakeDropCommand(TargetInventory->GetTempSlotIndex(), SpawnLocation),
+                Result);
+        }
     }
 
     Super::NativeOnDragCancelled(InDragDropEvent, InOperation);

@@ -5,6 +5,7 @@
 #include "Widget/Inventory/InventorySlotWidget.h"
 #include "Widget/Inventory/MoneyPanelWidget.h"
 #include "Widget/Inventory/ItemDetailPanelWidget.h"
+#include "Widget/Inventory/InventoryDragDropOperation.h"
 #include "Interface/InventoryUserInterface.h"
 #include "Component/InventoryComponent.h"
 #include "Player/ActionPlayerController.h"
@@ -39,7 +40,7 @@ void UInventoryWidget::InitializeInventoryWidget(UInventoryComponent* InInventor
         {
             if (UInventorySlotWidget* SlotWidget = Cast<UInventorySlotWidget>(SlotGridPanel->GetChildAt(i)))
             {
-                SlotWidget->InitializeSlot(TargetInventory.Get(), i, this);
+                SlotWidget->InitializeSlot(TargetInventory.Get(), i);
 
                 SlotWidget->OnSlotEnter.AddWeakLambda(
                     this,
@@ -151,6 +152,17 @@ FReply UInventoryWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKey
 
     // 내가 처리하지 않은 입력은 부모에서 처리
     return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
+bool UInventoryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    FInventoryCommandResult Result;
+    UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
+    TargetInventory->ExecuteCommand(
+        FInventoryCommand::MakeMoveCommand(TargetInventory->GetTempSlotIndex(), DragOp->SourceIndex),
+        Result);
+
+    return true;
 }
 
 void UInventoryWidget::RefreshInventoryWidget() const

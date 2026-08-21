@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Data/Item/ItemDataAsset.h"
+#include "Data/Item/Action/ItemAction.h"
 #include "NiagaraSystem.h"
 #include "WeaponDataAsset.generated.h"
 
@@ -73,5 +74,8 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "WeaponData")
     TObjectPtr<UAnimMontage> AttackMontage = nullptr;
+
+    UPROPERTY(EditAnywhere, Category = "Action")
+    TObjectPtr<UItemAction> ItemAction = nullptr;
 
 };

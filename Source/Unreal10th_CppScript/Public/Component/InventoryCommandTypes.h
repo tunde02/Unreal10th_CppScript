@@ -14,6 +14,7 @@ enum class EInventoryCommandType : uint8
     Move,
     Drop,
     Use,
+    Clear,
     Money
 };
 
@@ -81,6 +82,14 @@ public:
         return Command;
     }
 
+    static FInventoryCommand MakeClearCommand(int32 InSlotIndex)
+    {
+        FInventoryCommand Command;
+        Command.Type = EInventoryCommandType::Clear;
+        Command.TargetIndex = InSlotIndex;
+
+        return Command;
+    }
     static FInventoryCommand MakeMoneyCommand(int32 InMoneyDiff)
     {
         FInventoryCommand Command;

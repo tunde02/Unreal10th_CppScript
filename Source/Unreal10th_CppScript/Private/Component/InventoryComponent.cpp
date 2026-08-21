@@ -3,6 +3,8 @@
 
 #include "Component/InventoryComponent.h"
 #include "Framework/Subsystem/PickupFactorySubsystem.h"
+#include "Data/Item/UsableItemDataAsset.h"
+#include "Data/Item/WeaponDataAsset.h"
 
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
@@ -30,6 +32,9 @@ bool UInventoryComponent::ExecuteCommand(const FInventoryCommand& Command, FInve
         case EInventoryCommandType::Use:
             HandleUseCommand(Command.SourceIndex, OutResult);
             break;
+        case EInventoryCommandType::Clear:
+            HandleClearCommand(Command.TargetIndex, OutResult);
+            break;
         case EInventoryCommandType::Money:
             HandleMoneyCommand(Command.Count, OutResult);
             break;
@@ -51,7 +56,7 @@ FInvenSlot* UInventoryComponent::GetSlot(int InSlotIndex)
 
 FInvenSlot* UInventoryComponent::GetTempSlot()
 {
-    return &Slots[InventorySize];
+    return &Slots[TempSlotIndex];
 }
 
 void UInventoryComponent::AddMoney(int32 InIncome)
@@ -115,25 +120,6 @@ int32 UInventoryComponent::AddItem(const UItemDataAsset* InItemData, int32 InCou
 
 void UInventoryComponent::UseItem(int32 InSlotIndex)
 {
-    /*
-    if (!IsValidIndex(InSlotIndex))
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.UseItem()] : 유효하지 않은 인덱스 (Index: %d)"), InSlotIndex);
-        return;
-    }
-
-    FInvenSlot& SourceSlot = Slots[InSlotIndex];
-    if (SourceSlot.IsEmpty())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[InventoryComponent.UseItem()] : Index 슬롯에 아이템이 없음"));
-        return;
-    }
-
-    FInventoryCommand UseCommand = FInventoryCommand::MakeUseCommand(InSlotIndex);
-    FInventoryCommandResult Result;
-    ExecuteCommand(UseCommand, Result);
-    */
-
     if (!IsValidIndex(InSlotIndex))
     {
         return;
@@ -146,8 +132,24 @@ void UInventoryComponent::UseItem(int32 InSlotIndex)
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleUseCommand()] : %s를 사용했습니다."), *Slot.ItemData->DisplayName.ToString());
-    UpdateSlotCount(InSlotIndex, -1);
+    if (const UUsableItemDataAsset* Usable = Cast<const UUsableItemDataAsset>(Slot.ItemData))
+    {
+        if (Usable->ItemAction)
+        {
+            UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleUseCommand()] : %s를 사용했습니다."), *Slot.ItemData->DisplayName.ToString());
+            Usable->ItemAction->ExecuteAction_Implementation(GetOwner(), GetOwner());
+            UpdateSlotCount(InSlotIndex, -1);
+        }
+    }
+    else if (const UWeaponDataAsset* Weapon = Cast<const UWeaponDataAsset>(Slot.ItemData))
+    {
+        if (Weapon->ItemAction)
+        {
+            UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleUseCommand()] : %s를 장착했습니다."), *Slot.ItemData->DisplayName.ToString());
+            Weapon->ItemAction->ExecuteAction_Implementation(GetOwner(), GetOwner());
+            UpdateSlotCount(InSlotIndex, -1);
+        }
+    }
 }
 
 void UInventoryComponent::SetSlot(int32 InSlotIndex, const UItemDataAsset* InItemData, int32 InCount)
@@ -315,10 +317,22 @@ bool UInventoryComponent::HandleDropCommand(int32 InSlotIndex, const FVector& In
     {
         if (UPickupFactorySubsystem* Factory = World->GetSubsystem<UPickupFactorySubsystem>())
         {
+            const float DropDistanceLimit = 400.0f;
+
             for (int32 _ = 0; _ < Slot.GetCount(); _++)
             {
-                FVector SpawnLocation(FMath::RandPointInCircle(100.0f), 0);
-                SpawnLocation += InDropLocation;
+                FVector SpawnLocation = FVector::ZeroVector;
+                FVector OwnerLocation = GetOwner()->GetActorLocation();
+                float DropDistance = FVector::Dist(OwnerLocation, InDropLocation);
+
+                if (DropDistance > DropDistanceLimit)
+                {
+                    SpawnLocation = OwnerLocation + (InDropLocation * DropDistanceLimit / DropDistance);
+                }
+                else
+                {
+                    SpawnLocation += InDropLocation;
+                }
 
                 FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
                 Factory->SpawnPickupAsync(const_cast<UItemDataAsset*>(ItemData), SpawnTransform, FOnPickupSpawned());
@@ -353,6 +367,21 @@ bool UInventoryComponent::HandleUseCommand(int32 InSlotIndex, FInventoryCommandR
 
     OutResult.bSuccess = true;
     OutResult.RemainingCount = Slot.GetRemainingCount();
+
+    return OutResult.bSuccess;
+}
+
+bool UInventoryComponent::HandleClearCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult)
+{
+    OutResult.bSuccess = false;
+
+    if (!IsValidIndex(InSlotIndex))
+    {
+        return OutResult.bSuccess;
+    }
+
+    ClearSlot(InSlotIndex);
+    OutResult.bSuccess = true;
 
     return OutResult.bSuccess;
 }

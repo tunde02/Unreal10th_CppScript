@@ -66,7 +66,7 @@ public:
     inline int32 GetMoney() const { return Money; }
     FInvenSlot* GetSlot(int InSlotIndex);
     inline int32 GetSize() const { return InventorySize; }
-    inline int32 GetTempSlotIndex() const { return InventorySize; }
+    inline int32 GetTempSlotIndex() const { return TempSlotIndex; }
 
     // 임시 슬롯을 반환하는 함수 (드래그앤 드롭에 사용)
     FInvenSlot* GetTempSlot();
@@ -93,6 +93,7 @@ protected:
     bool HandleMoveCommand(int32 InSourceIndex, int32 InTargetIndex, FInventoryCommandResult& OutResult);
     bool HandleDropCommand(int32 InSlotIndex, const FVector& InDropLocation, FInventoryCommandResult& OutResult);
     bool HandleUseCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult);
+    bool HandleClearCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult);
     bool HandleMoneyCommand(int32 InMoneyDiff, FInventoryCommandResult& OutResult);
 
     virtual void BeginPlay() override;
@@ -121,6 +122,7 @@ protected:
 
 private:
     static constexpr int32 InventorySize = 10;
+    static constexpr int32 TempSlotIndex = InventorySize;
     static constexpr int32 InventoryFail = -1;
 
 };

@@ -21,7 +21,7 @@ class UNREAL10TH_CPPSCRIPT_API UInventorySlotWidget : public UUserWidget
     GENERATED_BODY()
 
 public:
-    void InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex, UInventoryWidget* InInventoryWidget);
+    void InitializeSlot(UInventoryComponent* InInventoryComponent, int32 InSlotIndex);
     void RefreshSlot() const;
 
 protected:
@@ -54,8 +54,6 @@ protected:
 private:
     UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
     TWeakObjectPtr<UInventoryComponent> TargetInventory = nullptr;
-
-    TWeakObjectPtr<UInventoryWidget> ParentWidget = nullptr;
 
     static constexpr int32 InvalidIndex = -1;
 

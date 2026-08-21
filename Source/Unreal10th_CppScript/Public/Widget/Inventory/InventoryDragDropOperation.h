@@ -14,9 +14,6 @@ class UNREAL10TH_CPPSCRIPT_API UInventoryDragDropOperation : public UDragDropOpe
 
 public:
     UPROPERTY(BlueprintReadonly)
-    TWeakObjectPtr<const UItemDataAsset> ItemData;
-
-    UPROPERTY(BlueprintReadonly)
     int32 SourceIndex = -1;
 
 };

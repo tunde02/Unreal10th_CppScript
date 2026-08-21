@@ -13,3 +13,9 @@ void UTemporarySlotWidget::InitializeSlot(const FInvenSlot* InSlot)
     IconImage->SetBrushTintColor(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
     CountText->SetText(FText::AsNumber(InSlot->GetCount()));
 }
+
+void UTemporarySlotWidget::SetVisual(UTexture2D* InIcon, int32 InCount)
+{
+    IconImage->SetBrushFromTexture(InIcon);
+    CountText->SetText(FText::AsNumber(InCount));
+}
