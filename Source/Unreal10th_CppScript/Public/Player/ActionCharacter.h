@@ -30,7 +30,7 @@ class UNREAL10TH_CPPSCRIPT_API AActionCharacter : public ACharacter, public ISta
 public:
     AActionCharacter();
 
-    virtual void EquipWeapon_Implementation(UWeaponDataAsset* InWeaponData) override;
+    virtual void EquipWeapon_Implementation(const UWeaponDataAsset* InWeaponData) override;
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     virtual bool ExecuteInventoryCommand(const FInventoryCommand& Command, FInventoryCommandResult& OutResult) override;

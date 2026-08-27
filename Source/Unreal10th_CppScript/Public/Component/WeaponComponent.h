@@ -27,10 +27,10 @@ public:
     void Initialize();
 
     UFUNCTION(BlueprintCallable)
-    void EquipWeapon(UWeaponDataAsset* InWeaponData);
+    void EquipWeapon(const UWeaponDataAsset* InWeaponData);
 
     // 무기가 드랍되었을 때 실행될 함수 (WeaponActor 에서 바인딩)
-    void OnWeaponDrop(UWeaponDataAsset* InDropWeaponData);
+    void OnWeaponDrop(const UWeaponDataAsset* InDropWeaponData);
 
     // 무기 공격 활성화/비활성화 때 실행될 함수
     void OnWeaponAttackState(bool bEnable);
@@ -60,10 +60,10 @@ public:
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon")
-    TObjectPtr<UWeaponDataAsset> DefaultWeaponData = nullptr;
+    TObjectPtr<const UWeaponDataAsset> DefaultWeaponData = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    TObjectPtr<UWeaponDataAsset> CurrentWeaponData = nullptr;
+    TObjectPtr<const UWeaponDataAsset> CurrentWeaponData = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
     TWeakObjectPtr<AWeaponActor> CurrentWeapon = nullptr;

@@ -15,7 +15,8 @@ enum class EInventoryCommandType : uint8
     Drop,
     Use,
     Clear,
-    Money
+    Money,
+    Equip
 };
 
 USTRUCT(BlueprintType)
@@ -95,6 +96,15 @@ public:
         FInventoryCommand Command;
         Command.Type = EInventoryCommandType::Money;
         Command.Count = InMoneyDiff;
+
+        return Command;
+    }
+
+    static FInventoryCommand MakeEquipCommand(int32 InSlotIndex)
+    {
+        FInventoryCommand Command;
+        Command.Type = EInventoryCommandType::Equip;
+        Command.SourceIndex = InSlotIndex;
 
         return Command;
     }

@@ -83,6 +83,7 @@ protected:
     int32 AddItem(const UItemDataAsset* InItemData, int32 InCount);
 
     void UseItem(int32 InSlotIndex);
+    void EquipItem(int32 InSlotIndex);
     void SetSlot(int32 InSlotIndex, const UItemDataAsset* InItemData, int32 InCount);
     void UpdateSlotCount(int32 InSlotIndex, int32 InDeltaCount);
     void ClearSlot(int32 InSlotIndex);
@@ -95,6 +96,7 @@ protected:
     bool HandleUseCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult);
     bool HandleClearCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult);
     bool HandleMoneyCommand(int32 InMoneyDiff, FInventoryCommandResult& OutResult);
+    bool HandleEquipCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult);
 
     virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;

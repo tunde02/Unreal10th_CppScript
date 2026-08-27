@@ -6,6 +6,9 @@
 #include "Data/Item/UsableItemDataAsset.h"
 #include "Data/Item/WeaponDataAsset.h"
 
+// DELETE ME?
+#include "Interface/WeaponUserInterface.h"
+
 // Sets default values for this component's properties
 UInventoryComponent::UInventoryComponent()
 {
@@ -37,6 +40,9 @@ bool UInventoryComponent::ExecuteCommand(const FInventoryCommand& Command, FInve
             break;
         case EInventoryCommandType::Money:
             HandleMoneyCommand(Command.Count, OutResult);
+            break;
+        case EInventoryCommandType::Equip:
+            HandleEquipCommand(Command.SourceIndex, OutResult);
             break;
         case EInventoryCommandType::None:
         default:
@@ -141,12 +147,33 @@ void UInventoryComponent::UseItem(int32 InSlotIndex)
             UpdateSlotCount(InSlotIndex, -1);
         }
     }
+    /* DELETE ME?
     else if (const UWeaponDataAsset* Weapon = Cast<const UWeaponDataAsset>(Slot.ItemData))
     {
         if (Weapon->ItemAction)
         {
             UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleUseCommand()] : %s를 장착했습니다."), *Slot.ItemData->DisplayName.ToString());
             Weapon->ItemAction->ExecuteAction_Implementation(GetOwner(), GetOwner());
+            UpdateSlotCount(InSlotIndex, -1);
+        }
+    }
+    */
+}
+
+void UInventoryComponent::EquipItem(int32 InSlotIndex)
+{
+    FInvenSlot* Slot = GetSlot(InSlotIndex);
+    if (!Slot)
+    {
+        return;
+    }
+
+    if (const UWeaponDataAsset* WeaponData = Cast<const UWeaponDataAsset>(Slot->ItemData))
+    {
+        if (GetOwner()->Implements<UWeaponUserInterface>())
+        {
+            UE_LOG(LogTemp, Log, TEXT("[InventoryComponent.HandleEquipCommand()] : %s를 사용했습니다."), *Slot->ItemData->DisplayName.ToString());
+            IWeaponUserInterface::Execute_EquipWeapon(GetOwner(), WeaponData);
             UpdateSlotCount(InSlotIndex, -1);
         }
     }
@@ -317,22 +344,10 @@ bool UInventoryComponent::HandleDropCommand(int32 InSlotIndex, const FVector& In
     {
         if (UPickupFactorySubsystem* Factory = World->GetSubsystem<UPickupFactorySubsystem>())
         {
-            const float DropDistanceLimit = 400.0f;
-
             for (int32 _ = 0; _ < Slot.GetCount(); _++)
             {
-                FVector SpawnLocation = FVector::ZeroVector;
-                FVector OwnerLocation = GetOwner()->GetActorLocation();
-                float DropDistance = FVector::Dist(OwnerLocation, InDropLocation);
-
-                if (DropDistance > DropDistanceLimit)
-                {
-                    SpawnLocation = OwnerLocation + (InDropLocation * DropDistanceLimit / DropDistance);
-                }
-                else
-                {
-                    SpawnLocation += InDropLocation;
-                }
+                FVector SpawnLocation(FMath::RandPointInCircle(100.0f), 0);
+                SpawnLocation += InDropLocation;
 
                 FTransform SpawnTransform(FRotator::ZeroRotator, SpawnLocation);
                 Factory->SpawnPickupAsync(const_cast<UItemDataAsset*>(ItemData), SpawnTransform, FOnPickupSpawned());
@@ -392,6 +407,30 @@ bool UInventoryComponent::HandleMoneyCommand(int32 InMoneyDiff, FInventoryComman
 
     AddMoney(InMoneyDiff);
     OutResult.bSuccess = true;
+
+    return OutResult.bSuccess;
+}
+
+bool UInventoryComponent::HandleEquipCommand(int32 InSlotIndex, FInventoryCommandResult& OutResult)
+{
+    OutResult.bSuccess = false;
+
+    if (!IsValidIndex(InSlotIndex))
+    {
+        return OutResult.bSuccess;
+    }
+
+    FInvenSlot& Slot = Slots[InSlotIndex];
+
+    if (Slot.IsEmpty())
+    {
+        return OutResult.bSuccess;
+    }
+
+    EquipItem(InSlotIndex);
+
+    OutResult.bSuccess = true;
+    OutResult.RemainingCount = Slot.GetRemainingCount();
 
     return OutResult.bSuccess;
 }

@@ -113,6 +113,10 @@ FReply UInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, 
             FInventoryCommand::MakeUseCommand(Index),
             Result
         );
+        TargetInventory->ExecuteCommand(
+            FInventoryCommand::MakeEquipCommand(Index),
+            Result
+        ); // ..;? 어차피 Handle 함수들에서 타입 맞지 않으면 리턴하니까 상관은 없다곤 함
     }
 
     return Reply;
@@ -220,6 +224,27 @@ void UInventorySlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDro
             else
             {
                 SpawnLocation = End;
+            }
+
+            if (APawn* PlayerPawn = PC->GetPawn())
+            {
+                const float MaxDistance = 500.0f;
+                FVector PlayerLocation = PlayerPawn->GetActorLocation();
+
+                if (FVector::DistSquared2D(SpawnLocation, PlayerLocation) > MaxDistance * MaxDistance)
+                {
+                    FVector Direction = (SpawnLocation - PlayerLocation).GetUnsafeNormal2D();
+                    SpawnLocation = PlayerLocation + Direction * MaxDistance;
+
+                    FVector DownStart = SpawnLocation + FVector::UpVector * 10000.0f;
+                    FVector DownEnd = SpawnLocation + FVector::DownVector * 10000.0f;
+                    FHitResult GroundHit;
+
+                    if (GetWorld()->LineTraceSingleByChannel(GroundHit, DownStart, DownEnd, ECollisionChannel::ECC_Visibility))
+                    {
+                        SpawnLocation = GroundHit.Location;
+                    }
+                }
             }
 
             FInventoryCommandResult Result;

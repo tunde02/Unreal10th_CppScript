@@ -24,6 +24,6 @@ public:
     virtual UWeaponComponent* GetWeaponComponent() const = 0;
 
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-    void EquipWeapon(UWeaponDataAsset* InWeaponData);
+    void EquipWeapon(const UWeaponDataAsset* InWeaponData);
 
 };

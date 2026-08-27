@@ -44,7 +44,7 @@ AWeaponActor::AWeaponActor()
     TrailVfx->bAutoActivate = false;
 }
 
-void AWeaponActor::InitializeWeapon(UWeaponDataAsset* InData)
+void AWeaponActor::InitializeWeapon(const UWeaponDataAsset* InData)
 {
     if (!InData)
     {

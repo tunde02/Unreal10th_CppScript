@@ -10,7 +10,7 @@ class UCapsuleComponent;
 class UWeaponDataAsset;
 class UNiagaraComponent;
 
-DECLARE_DELEGATE_OneParam(FOnWeaponDrop, UWeaponDataAsset*);
+DECLARE_DELEGATE_OneParam(FOnWeaponDrop, const UWeaponDataAsset*);
 
 UCLASS()
 class UNREAL10TH_CPPSCRIPT_API AWeaponActor : public AActor
@@ -21,7 +21,7 @@ public:
     AWeaponActor();
 
     UFUNCTION(BlueprintCallable)
-    void InitializeWeapon(UWeaponDataAsset* InData);
+    void InitializeWeapon(const UWeaponDataAsset* InData);
 
     UFUNCTION(BlueprintCallable)
     void EquipToTarget(AActor* InTarget);
@@ -74,7 +74,7 @@ protected:
     TObjectPtr<UNiagaraComponent> TrailVfx = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TObjectPtr<UWeaponDataAsset> WeaponData = nullptr;
+    TObjectPtr<const UWeaponDataAsset> WeaponData = nullptr;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     int32 CurrentUseCount = 1;

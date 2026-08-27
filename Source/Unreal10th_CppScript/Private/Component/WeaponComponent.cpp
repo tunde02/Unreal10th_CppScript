@@ -103,7 +103,7 @@ void UWeaponComponent::Initialize()
     }
 }
 
-void UWeaponComponent::EquipWeapon(UWeaponDataAsset* InWeaponData)
+void UWeaponComponent::EquipWeapon(const UWeaponDataAsset* InWeaponData)
 {
     // 같은 종류의 무기 장비
     if (InWeaponData == CurrentWeaponData)
@@ -132,7 +132,7 @@ void UWeaponComponent::EquipWeapon(UWeaponDataAsset* InWeaponData)
         if (!CurrentWeaponData->IsLoaded())
         {
             // 현재 요청을 람다 함수에 캡처하기 위한 변수
-            UWeaponDataAsset* RequestedData = CurrentWeaponData;
+            const UWeaponDataAsset* RequestedData = CurrentWeaponData;
 
             // 람다 함수는 로딩이 완료됐을 때 실행된다
             // 만약 로딩 중에 다른 무기를 장착하는 요청이 들어올 경우
@@ -158,7 +158,7 @@ void UWeaponComponent::EquipWeapon(UWeaponDataAsset* InWeaponData)
     }
 }
 
-void UWeaponComponent::OnWeaponDrop(UWeaponDataAsset* InDropWeaponData)
+void UWeaponComponent::OnWeaponDrop(const UWeaponDataAsset* InDropWeaponData)
 {
     if (DefaultWeaponData && (DefaultWeaponData != InDropWeaponData))
     {
